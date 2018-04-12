@@ -63,6 +63,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
              struct stat *st, unsigned int flags)
 {
     this->islink = false;
+    this->color = "";
 
     if (st == nullptr) {
         this->user = '?';
@@ -76,10 +77,18 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         this->prefix = ' ';
         this->git = " ";
         this->isdir = false;
-        this->color = findColor(SLK_ORPHAN);
         this->modified = 0;
         this->bsize = 0;
+
+        if (settings.colors) {
+            this->color = findColor(SLK_ORPHAN);
+        }
     } else {
+        if (settings.colors) {
+            this->color = getColor(file, st->st_mode);
+        }
+        this->suffix = ' ';
+
         #ifdef USE_GIT
 
         if (flags != UINT_MAX) {
@@ -149,7 +158,6 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         #endif
 
         this->target = "";
-        this->color = getColor(file, st->st_mode);
 
         #ifdef S_ISLNK
 
@@ -188,7 +196,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                     this->target_color = findColor(SLK_MISSING);
 
                     if (!settings.list) {
-                        this->suffix = "@";
+                        this->suffix = '@';
                     }
                 }
             }
@@ -237,7 +245,6 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                              settings.symbols.user.separator.length()
                          );
 
-        this->file_len = strlen(file);
         this->date_len = this->date.first.length();
         this->date_unit_len = this->date.second.length();
         this->size_len = this->size.length();
@@ -249,8 +256,10 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
             this->suffix = '/';
             this->isdir = true;
         } else if ((st->st_mode & S_IEXEC) != 0 && !islink) {
-            this->suffix += '*';
+            this->suffix = '*';
         }
+
+        this->file_len = strlen(file) + suffix.length();
     }
 
     if (settings.colors) {
@@ -349,17 +358,14 @@ void Entry::list(int max_user, int max_date, int max_date_unit, int max_size)
 
 void Entry::print(int max_len)
 {
+    /* max_len += + strlen("\033[0m") * 2; */
+
     printf(
-        "%s%s%-*s",
-        #ifdef USE_GIT
-        git.c_str()
-        #else
-        ""
-        #endif
-        ,
+        "%s%s%-*s\033[0m",
+        git.c_str(),
         color.c_str(),
         (max_len),
-        (file + "\033[0m" + suffix + "\033[0m").c_str()
+        (file + suffix).c_str()
     );
 }
 

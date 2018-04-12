@@ -213,6 +213,9 @@ public:
 
     void list(int max_user, int max_date, int max_date_unit, int max_size);
     void print(int max_len);
+
+    std::string suffix;
+    std::string color;
 private:
     std::string git;
     std::string prefix;
@@ -220,9 +223,7 @@ private:
     std::string user;
     DateFormat date;
     std::string size;
-    std::string suffix;
     std::string target;
-    std::string color;
     std::string target_color;
 
     static char fileTypeLetter(unsigned int mode);

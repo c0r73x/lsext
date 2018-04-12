@@ -361,8 +361,8 @@ void printdir(FileList *lst)
             max_len = std::max(l->file_len, max_len);
         }
 
-        max_len += 10; // for icons, colors etc.
-        int calc = ((float)w.ws_col / (float)max_len);
+        /* max_len += 10; // for icons, colors etc. */
+        int calc = ((float)w.ws_col / (float)max_len) - 2;
         int columns = std::max(calc, 1);
 
         int current = 0;
@@ -519,24 +519,26 @@ void loadconfig()
     settings.symbols.git.unreadable = cpp11_getstring(ini, "symbols:git_unreadable", "-");
     settings.symbols.git.untracked = cpp11_getstring(ini, "symbols:git_untracked", "?");
     settings.symbols.git.unchanged = cpp11_getstring(ini, "symbols:git_unchanged", " ");
+
     settings.symbols.git.dir_dirty = cpp11_getstring(ini, "symbols:git_dir_dirty", "!");
     settings.symbols.git.dir_clean = cpp11_getstring(ini, "symbols:git_dir_clean", " ");
     settings.symbols.git.repo_dirty = cpp11_getstring(ini, "symbols:git_repo_dirty", "!");
     settings.symbols.git.repo_clean = cpp11_getstring(ini, "symbols:git_repo_clean", "@");
 
-    settings.color.git.ignore = iniparser_getint(ini, "color:git_ignore", 0);
-    settings.color.git.conflict = iniparser_getint(ini, "color:git_conflict", 1);
-    settings.color.git.modified = iniparser_getint(ini, "color:git_modified", 3);
-    settings.color.git.renamed = iniparser_getint(ini, "color:git_renamed", 5);
-    settings.color.git.added = iniparser_getint(ini, "color:git_added", 2);
-    settings.color.git.typechange = iniparser_getint(ini, "color:git_typechange", 4);
-    settings.color.git.unreadable = iniparser_getint(ini, "color:git_unreadable", 9);
-    settings.color.git.untracked = iniparser_getint(ini, "color:git_untracked", 8);
-    settings.color.git.unchanged = iniparser_getint(ini, "color:git_unchanged", 0);
-    settings.color.git.dir_dirty = iniparser_getint(ini, "color:git_dir_dirty", 1);
-    settings.color.git.dir_clean = iniparser_getint(ini, "color:git_dir_clean", 0);
-    settings.color.git.repo_dirty = iniparser_getint(ini, "color:git_repo_dirty", 1);
-    settings.color.git.repo_clean = iniparser_getint(ini, "color:git_repo_clean", 2);
+    settings.color.git.ignore = iniparser_getint(ini, "colors:git_ignore", 0);
+    settings.color.git.conflict = iniparser_getint(ini, "colors:git_conflict", 1);
+    settings.color.git.modified = iniparser_getint(ini, "colors:git_modified", 3);
+    settings.color.git.renamed = iniparser_getint(ini, "colors:git_renamed", 5);
+    settings.color.git.added = iniparser_getint(ini, "colors:git_added", 2);
+    settings.color.git.typechange = iniparser_getint(ini, "colors:git_typechange", 4);
+    settings.color.git.unreadable = iniparser_getint(ini, "colors:git_unreadable", 9);
+    settings.color.git.untracked = iniparser_getint(ini, "colors:git_untracked", 8);
+    settings.color.git.unchanged = iniparser_getint(ini, "colors:git_unchanged", 0);
+
+    settings.color.git.dir_dirty = iniparser_getint(ini, "colors:git_dir_dirty", 1);
+    settings.color.git.dir_clean = iniparser_getint(ini, "colors:git_dir_clean", 0);
+    settings.color.git.repo_dirty = iniparser_getint(ini, "colors:git_repo_dirty", 1);
+    settings.color.git.repo_clean = iniparser_getint(ini, "colors:git_repo_clean", 2);
     #endif
 
     iniparser_freedict(ini);
