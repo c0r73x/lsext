@@ -1,0 +1,102 @@
+[settings]
+; use idividual color for size number
+size_number_color = 1
+; use idividual color for date number
+date_number_color = 1
+
+show_hidden = 0
+list = 0
+resolve_links = 0
+reversed = 0
+dirs_first = 1
+colors = 1
+
+; default sort method 0 = Alpha, 1 = Modified, 2 = Size
+sort = 0
+
+[colors]
+perm_none = 0
+perm_exec = 2
+perm_read = 3
+perm_write = 1
+
+perm_dir = 4
+perm_link = 6
+perm_sticky = 5
+perm_special = 5
+perm_block = 5
+perm_unknown = 1
+perm_other = 7
+
+user = 11
+group = 3
+user_separator = 0
+
+; used with size_number_color = 1
+size_number = 12
+
+size_byte = 4
+size_kilo = 4
+size_mega = 4
+size_giga = 4
+size_tera = 4
+size_peta = 4
+
+; used with date_number_color = 1
+date_number = 10
+
+date_sec = 2
+date_min = 2
+date_hour = 2
+date_day = 2
+date_mon = 2
+date_year = 2
+
+git_ignore = 0
+git_conflict = 1
+git_modified = 3
+git_renamed = 5
+git_added = 2
+git_typechange = 4
+git_unreadable = 9
+git_untracked = 8
+; git_unchanged = 2
+
+git_dir_dirty = 1
+; git_dir_clean = 2
+
+git_repo_dirty = 1
+git_repo_clean = 2
+
+[symbols]
+user_separator = ":"
+
+size_byte = "B"
+size_kilo = "K"
+size_mega = "M"
+size_giga = "G"
+size_tera = "T"
+size_peta = "P"
+
+date_sec = "sec"
+date_min = "min"
+date_hour = "hour"
+date_day = "day"
+date_mon = "mon"
+date_year = "year"
+
+git_ignore = "!"
+git_conflict = "X"
+git_modified = "~"
+git_renamed = "R"
+git_added = "+"
+git_typechange = "T"
+git_unreadable = "-"
+git_untracked = "?"
+; git_unchanged = "="
+
+git_dir_dirty = "!"
+; git_dir_clean = "="
+
+git_repo_dirty = "!"
+git_repo_clean = "@"
