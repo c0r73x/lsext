@@ -342,7 +342,7 @@ void printdir(FileList *lst)
         size_t max_size = 0;
 
         for (const auto l : *lst) {
-            max_user = std::max( l->user_len, max_user);
+            max_user = std::max(l->user_len, max_user);
             max_date = std::max(l->date_len,  max_date);
             max_date_unit = std::max(l->date_unit_len, max_date_unit);
             max_size = std::max(l->size_len, max_size);

@@ -239,12 +239,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         this->file = file;
 
-        this->user_len = (
-                             strlen(pw->pw_name) +
-                             strlen(gr->gr_name) +
-                             settings.symbols.user.separator.length()
-                         );
-
+        this->user_len = this->user.length();
         this->date_len = this->date.first.length();
         this->date_unit_len = this->date.second.length();
         this->size_len = this->size.length();
