@@ -662,11 +662,11 @@ DateFormat toDateFormat(std::string num, int unit)
         settings.color.date.year,
     };
 
-    if (settings.colors && !settings.size_number_color) {
+    if (settings.colors && !settings.date_number_color) {
         c_unit = "\033[38;5;" + std::to_string(
                      gsl::at(colors, unit)
                  ) + "m";
-    } else if (settings.colors && settings.size_number_color) {
+    } else if (settings.colors && settings.date_number_color) {
         c_symbol = "\033[38;5;" + std::to_string(
                        gsl::at(colors, unit)
                    ) + "m";
