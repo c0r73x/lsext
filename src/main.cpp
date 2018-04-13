@@ -405,7 +405,9 @@ void printdir(FileList *lst)
             }
         }
 
-        printf("\n");
+        if (current != 0)  {
+            printf("\n");
+        }
     }
 }
 
