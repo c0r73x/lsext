@@ -54,9 +54,6 @@ release_dbg_info:
 install: build
 	$(MAKE) -C build install
 
-uninstall: build/install_manifest.txt
-	$(MAKE) -C build uninstall
-
 clean:
 	$(MAKE) -C "build" clean
 

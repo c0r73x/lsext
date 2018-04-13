@@ -1,14 +1,10 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.10)
 
 project(lsext)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_AUTOMOC ON)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -ggdb")
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
-set(CURSES_NEED_NCURSES TRUE)
-set(CURSES_NEED_WIDE TRUE)
+set(CMAKE_CXX_STANDARD 17)
+add_definitions("-Werror -Wall -pedantic -ggdb")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
