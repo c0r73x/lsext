@@ -8,6 +8,7 @@
 #include <sstream>
 #include <vector>
 
+#include <glob.h>
 #include <dirent.h>
 #include <libgen.h>
 #include <pwd.h>
@@ -280,31 +281,31 @@ Entry *addfile(const char *path, const char *file)
 FileList listdir(const char *path)
 {
     FileList lst;
-    DIR *dir;
+    glob_t res;
 
-    if ((dir = opendir(path)) != nullptr) {
-        dirent *ent;
+    std::string pattern = std::string(path) + "/*";
+    glob(pattern.c_str(), GLOB_TILDE, NULL, &res);
 
-        while ((ent = readdir((dir))) != nullptr) {
-            if (
-                strcmp(ent->d_name, ".") == 0 ||
-                strcmp(ent->d_name, "..") == 0
-            ) {
-                continue;
-            }
+    /* #pragma omp parallel for shared(lst) */
+    for(unsigned int i = 0; i < res.gl_pathc; i++) {
+        const char *file = basename(res.gl_pathv[i]);
 
-            if (ent->d_name[0] == '.' && !settings.show_hidden) {
-                continue;
-            }
-
-            auto f = addfile(path, &ent->d_name[0]);
-
-            if (f != nullptr) {
-                lst.push_back(f);
-            }
+        if (
+            strcmp(file, ".") == 0 ||
+            strcmp(file, "..") == 0
+        ) {
+            continue;
         }
 
-        closedir(dir);
+        if (file[0] == '.' && !settings.show_hidden) {
+            continue;
+        }
+
+        auto f = addfile(path, file);
+
+        if (f != nullptr) {
+            lst.push_back(f);
+        }
     }
 
     return lst;
@@ -706,20 +707,23 @@ int main(int argc, const char *argv[])
             return strlen(a) < strlen(b);
         });
 
-        for (int i = 0; i < argc - optind; i++) {
+        int count = argc - optind;
+
+        #pragma omp parallel for shared(count)
+        for (int i = 0; i < count; i++) {
             struct stat st = {0};
 
             if ((lstat(sp.at(i), &st)) < 0) {
-                return EXIT_FAILURE;
-            }
-
-            if (S_ISDIR(st.st_mode)) {
-                dirs.insert(DirList::value_type(sp.at(i), listdir(sp.at(i))));
+                fprintf(stderr, "Unable to open %s!", sp.at(i));
             } else {
-                char file[PATH_MAX] = {0};
-                strncpy(&file[0], sp.at(i), PATH_MAX);
+                if (S_ISDIR(st.st_mode)) {
+                    dirs.insert(DirList::value_type(sp.at(i), listdir(sp.at(i))));
+                } else {
+                    char file[PATH_MAX] = {0};
+                    strncpy(&file[0], sp.at(i), PATH_MAX);
 
-                files.push_back(addfile("", &file[0]));
+                    files.push_back(addfile("", &file[0]));
+                }
             }
         }
     } else {

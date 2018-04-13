@@ -231,15 +231,31 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         #endif /* S_ISLNK */
 
-        struct passwd *pw = getpwuid(st->st_uid);
-        struct group  *gr = getgrgid(st->st_gid);
+        struct passwd pw;
+        struct passwd *pwp;
 
-        this->user = colorize(pw->pw_name, settings.color.user.user);
+        struct group gr;
+        struct group *grp;
+
+        char buf[PATH_MAX] = {0};
+
+        if (getpwuid_r(st->st_uid, &pw, buf, sizeof(buf), &pwp)) {
+            this->user = colorize("????", settings.color.user.user);
+        } else {
+            this->user = colorize(pw.pw_name, settings.color.user.user);
+        }
+
         this->user += colorize(
                           settings.symbols.user.separator,
                           settings.color.user.separator
                       );
-        this->user += colorize(gr->gr_name, settings.color.user.group);
+
+        if (getgrgid_r(st->st_gid, &gr, buf, sizeof(buf), &grp)) {
+            this->user += colorize("????", settings.color.user.group);
+        } else {
+            this->user += colorize(gr.gr_name, settings.color.user.group);
+        }
+
 
         this->date = timeAgo(st->st_ctime);
         this->size = unitConv(st->st_size);
