@@ -13,6 +13,7 @@
 
 #include <dirent.h>
 #include <grp.h>
+#include <libgen.h>
 #include <linux/xattr.h>
 #include <pwd.h>
 #include <sys/stat.h>
@@ -111,9 +112,11 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         this->file = file;
         this->user_len = 1;
         this->date_len = 1;
+        this->date_unit_len = 1;
         this->size_len = 1;
+        this->suffix = ' ';
         this->prefix = ' ';
-        this->git = " ";
+        this->git = ' ';
         this->isdir = false;
         this->modified = 0;
         this->bsize = 0;
@@ -198,7 +201,6 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
             char target[PATH_MAX] = {0};
 
             if ((readlink(fullpath, &target[0], sizeof(target))) >= 0) {
-
                 if (settings.list) {
                     this->suffix = " -> ";
                 }
@@ -208,32 +210,18 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                 this->target = &target[0];
                 std::string path = &target[0];
 
-                char linkpath[PATH_MAX] = {0};
-
                 if (target[0] != '/') {
-                    path = directory + "/" + this->target;
+                    path = std::string(dirname(fullpath)) + "/" + this->target;
                 }
 
-                if (realpath(path.c_str(), &linkpath[0]) != nullptr) {
-                    struct stat tst = {0};
+                struct stat tst = {0};
 
-                    if ((lstat(&linkpath[0], &tst)) < 0) {
-                        this->color = findColor(SLK_ORPHAN);
-                        this->target_color = findColor(SLK_ORPHAN);
-                    } else {
-                        this->color = getColor(file, tst.st_mode);
-                        this->target_color = getColor(&target[0], tst.st_mode);
-                    }
+                if ((lstat(path.c_str(), &tst)) < 0) {
+                    this->color = findColor(SLK_ORPHAN);
+                    this->target_color = findColor(SLK_ORPHAN);
                 } else {
-                    this->color = findColor(SLK_MISSING);
-                    this->target_color = findColor(SLK_MISSING);
-
-                    if (!settings.list) {
-                        this->suffix = colorize(
-                                           settings.symbols.suffix.link,
-                                           settings.color.suffix.link
-                                       );
-                    }
+                    this->color = getColor(file, tst.st_mode);
+                    this->target_color = getColor(&target[0], tst.st_mode);
                 }
             }
         }
@@ -259,10 +247,10 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         this->file = file;
 
-        this->user_len = this->user.length();
-        this->date_len = this->date.first.length();
-        this->date_unit_len = this->date.second.length();
-        this->size_len = this->size.length();
+        this->user_len = cleanlen(this->user);
+        this->date_len = cleanlen(this->date.first);
+        this->date_unit_len = cleanlen(this->date.second);
+        this->size_len = cleanlen(this->size);
 
         this->prefix = (fileHasAcl(fullpath, st) > 0) ? '+' : ' ';
         this->isdir = false;
@@ -279,14 +267,15 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                                settings.color.suffix.exec
                            );
         }
-
-        this->file_len = (color + file + suffix + git).length();
-        this->clean_len = cleanlen(color + file + suffix + git);
     }
 
     if (settings.colors) {
+        this->file += "\033[0m";
         this->perms = colorperms(this->perms);
     }
+
+    this->file_len = (color + file + suffix + git).length();
+    this->clean_len = cleanlen(color + file + suffix + git);
 }
 
 std::string Entry::colorperms(std::string input)
@@ -350,17 +339,22 @@ std::string Entry::colorperms(std::string input)
 
 void Entry::list(int max_user, int max_date, int max_date_unit, int max_size)
 {
+    int ulen = cleanlen(user);
+    int dlen = cleanlen(date.first);
+    int dulen = cleanlen(date.second);
+    int slen = cleanlen(size);
+
     printf(
-        " %s%s    %-*s   %-*s%-*s %*s  %s%s%s%s%s%s\n",
+        " %s%s    %s%s   %s%s %s%s  %s%s  %s%s%s%s%s%s\033[0m\n",
         perms.c_str(),
         prefix.c_str(),
-        (max_user + 1),
         user.c_str(),
-        (max_date + 1),
+        std::string(max_user - ulen, ' ').c_str(),
         date.first.c_str(),
-        (max_date_unit + 1),
+        std::string(max_date - dlen, ' ').c_str(),
         date.second.c_str(),
-        (max_size + 1),
+        std::string(max_date_unit - dulen, ' ').c_str(),
+        std::string(max_size - slen, ' ').c_str(),
         size.c_str(),
         #ifdef USE_GIT
         git.c_str()
