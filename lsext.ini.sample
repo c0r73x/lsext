@@ -73,6 +73,7 @@ git_dir_dirty_fg = 1
 
 git_repo_dirty_fg = 1
 git_repo_clean_fg = 2
+git_repo_bare_fg = 4
 
 [symbols]
 suffix_exec = "*"
@@ -110,3 +111,4 @@ git_dir_dirty = "!"
 
 git_repo_dirty = "!"
 git_repo_clean = "@"
+git_repo_bare = "+"

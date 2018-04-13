@@ -89,7 +89,7 @@ std::string Entry::colorize(std::string input, color_t color)
 
 unsigned int Entry::cleanlen(std::string input)
 {
-    std::regex esc_re("\033\\[[;0-9]+m");
+    std::regex esc_re("\033\\[[;0-9]*m");
     return std::regex_replace(
                input,
                esc_re,
@@ -142,6 +142,9 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                     if (flags & GIT_DIR_DIRTY) {
                         color = settings.color.git.repo_dirty;
                         symbol = settings.symbols.git.repo_dirty;
+                    } else if (flags & GIT_DIR_BARE) {
+                        color = settings.color.git.repo_bare;
+                        symbol = settings.symbols.git.repo_bare;
                     } else {
                         color = settings.color.git.repo_clean;
                         symbol = settings.symbols.git.repo_clean;

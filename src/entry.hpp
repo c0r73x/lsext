@@ -36,7 +36,8 @@
 
 #define GIT_DIR_CLEAN 0x00000000
 #define GIT_DIR_DIRTY 0x00000001
-#define GIT_ISREPO    0x00000010
+#define GIT_DIR_BARE  0x00000010
+#define GIT_ISREPO    0x10000000
 
 using DateFormat = std::pair<std::string, std::string>;
 
@@ -139,10 +140,13 @@ struct settings_t {
             color_t unreadable;
             color_t untracked;
             color_t unchanged;
+
             color_t dir_dirty;
             color_t dir_clean;
+
             color_t repo_dirty;
             color_t repo_clean;
+            color_t repo_bare;
         } git;
         #endif
     } color;
@@ -187,10 +191,13 @@ struct settings_t {
             std::string unreadable;
             std::string untracked;
             std::string unchanged;
+
             std::string dir_dirty;
             std::string dir_clean;
+
             std::string repo_dirty;
             std::string repo_clean;
+            std::string repo_bare;
         } git;
         #endif
     } symbols;

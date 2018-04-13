@@ -57,10 +57,6 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 {
     unsigned int flags = GIT_DIR_CLEAN;
 
-    if (!settings.resolve_repos) {
-        return UINT_MAX;
-    }
-
     git_status_options opts = GIT_STATUS_OPTIONS_INIT;
     opts.flags = (
                      GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
@@ -74,7 +70,7 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 
         int error = git_repository_discover(&root, path.c_str(), 0, NULL);
 
-        if (error >= 0) {
+        if (error == 0) {
             error = git_repository_open(&repo, root.ptr);
 
             if (error < 0) {
@@ -107,14 +103,19 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     opts.pathspec.strings[0] = const_cast<char *>(path.c_str());
 
     git_status_list *statuses = NULL;
-    git_status_list_new(&statuses, repo, &opts);
+    int error = git_status_list_new(&statuses, repo, &opts);
+
+    if (error < 0) { // Probably bare repo
+        git_repository_free(repo);
+        return GIT_ISREPO | GIT_DIR_BARE;
+    }
 
     size_t count = git_status_list_entrycount(statuses);
 
     for (size_t i = 0; i < count; ++i) {
         const git_status_entry *entry = git_status_byindex(statuses, i);
 
-        if (entry->status != 0) {
+        if (entry->status & ~GIT_STATUS_IGNORED && entry->status != 0) {
             flags |= GIT_DIR_DIRTY;
             break;
         }
@@ -149,7 +150,7 @@ Entry *addfile(const char *path, const char *file)
             return nullptr;
         }
 
-        std::regex root_re("/\\.git$");
+        std::regex root_re("/\\.git/$");
 
         rp = std::regex_replace(
                  root.ptr,
@@ -241,7 +242,7 @@ Entry *addfile(const char *path, const char *file)
                        nullptr
                    );
         } else if (!S_ISLNK(st.st_mode)) {
-            std::string path = dirpath;
+            std::string path = &dirpath[0];
             path.replace(path.begin(), path.begin() + rp.length(), "");
 
             if (path.length()) {
@@ -371,6 +372,7 @@ void printdir(FileList *lst)
             max_len = std::max(l->clean_len, max_len);
         }
 
+        max_len += 1;
         int calc = ((float)w.ws_col / (float)max_len);
         int columns = std::max(calc, 1);
 
@@ -535,7 +537,8 @@ void loadconfig()
     settings.color.size.tera.bg = iniparser_getint(ini, "colors:size_tera_bg", -1);
     settings.color.size.peta.bg = iniparser_getint(ini, "colors:size_peta_bg", -1);
 
-    settings.color.date.number.fg = iniparser_getint(ini, "colors:date_number_fg", 10); settings.color.date.number.bg = iniparser_getint(ini, "colors:date_number_bg", -1);
+    settings.color.date.number.fg = iniparser_getint(ini, "colors:date_number_fg", 10);
+    settings.color.date.number.bg = iniparser_getint(ini, "colors:date_number_bg", -1);
 
     settings.color.date.sec.fg = iniparser_getint(ini, "colors:date_sec_fg", 2);
     settings.color.date.min.fg = iniparser_getint(ini, "colors:date_min_fg", 2);
@@ -586,8 +589,10 @@ void loadconfig()
 
     settings.symbols.git.dir_dirty = cpp11_getstring(ini, "symbols:git_dir_dirty", "!");
     settings.symbols.git.dir_clean = cpp11_getstring(ini, "symbols:git_dir_clean", " ");
+
     settings.symbols.git.repo_dirty = cpp11_getstring(ini, "symbols:git_repo_dirty", "!");
     settings.symbols.git.repo_clean = cpp11_getstring(ini, "symbols:git_repo_clean", "@");
+    settings.symbols.git.repo_bare = cpp11_getstring(ini, "symbols:git_repo_bare", "+");
 
     settings.color.git.ignore.fg = iniparser_getint(ini, "colors:git_ignore_fg", 0);
     settings.color.git.conflict.fg = iniparser_getint(ini, "colors:git_conflict_fg", 1);
@@ -601,8 +606,10 @@ void loadconfig()
 
     settings.color.git.dir_dirty.fg = iniparser_getint(ini, "colors:git_dir_dirty_fg", 1);
     settings.color.git.dir_clean.fg = iniparser_getint(ini, "colors:git_dir_clean_fg", 0);
+
     settings.color.git.repo_dirty.fg = iniparser_getint(ini, "colors:git_repo_dirty_fg", 1);
     settings.color.git.repo_clean.fg = iniparser_getint(ini, "colors:git_repo_clean_fg", 2);
+    settings.color.git.repo_bare.fg = iniparser_getint(ini, "colors:git_repo_bare_fg", 4);
 
     settings.color.git.ignore.bg = iniparser_getint(ini, "colors:git_ignore_bg", -1);
     settings.color.git.conflict.bg = iniparser_getint(ini, "colors:git_conflict_bg", -1);
@@ -616,8 +623,10 @@ void loadconfig()
 
     settings.color.git.dir_dirty.bg = iniparser_getint(ini, "colors:git_dir_dirty_bg", -1);
     settings.color.git.dir_clean.bg = iniparser_getint(ini, "colors:git_dir_clean_bg", -1);
+
     settings.color.git.repo_dirty.bg = iniparser_getint(ini, "colors:git_repo_dirty_bg", -1);
     settings.color.git.repo_clean.bg = iniparser_getint(ini, "colors:git_repo_clean_bg", -1);
+    settings.color.git.repo_bare.bg = iniparser_getint(ini, "colors:git_repo_bare_bg", -1);
     #endif
 
     iniparser_freedict(ini);
@@ -724,7 +733,7 @@ int main(int argc, const char *argv[])
         if (dirs.size() > 1 || !files.empty()) {
             std::string path = dir.first;
             while (path.back() == '/') {
-                path.erase(path.end());
+                path.pop_back();
             }
 
             fprintf(stdout, "\n\033[0m%s:\n", path.c_str());
