@@ -60,6 +60,11 @@ enum dateunit_t {
     DATE_YEAR,
 };
 
+struct color_t {
+    int fg;
+    int bg;
+};
+
 struct settings_t {
     bool resolve_links;
     bool show_hidden;
@@ -72,70 +77,82 @@ struct settings_t {
     sort_t sort;
 
     struct colors_t {
-        struct date_t {
-            int number;
+        struct prefix_t {
+            color_t exec;
+            color_t dir;
+            color_t link;
+        } prefix;
 
-            int sec;
-            int min;
-            int hour;
-            int day;
-            int mon;
-            int year;
-            int other;
+        struct date_t {
+            color_t number;
+
+            color_t sec;
+            color_t min;
+            color_t hour;
+            color_t day;
+            color_t mon;
+            color_t year;
+            color_t other;
         } date;
 
         struct perm_t {
-            int none;
-            int read;
-            int write;
-            int exec;
+            color_t none;
+            color_t read;
+            color_t write;
+            color_t exec;
 
-            int dir;
-            int link;
-            int sticky;
-            int special;
-            int block;
-            int other;
-            int unknown;
+            color_t dir;
+            color_t link;
+            color_t sticky;
+            color_t special;
+            color_t block;
+            color_t other;
+            color_t unknown;
         } perm;
 
         struct user_t {
-            int user;
-            int group;
-            int separator;
+            color_t user;
+            color_t group;
+            color_t separator;
         } user;
 
         struct fsize_t {
-            int number;
+            color_t number;
 
-            int byte;
-            int kilo;
-            int mega;
-            int giga;
-            int tera;
-            int peta;
+            color_t byte;
+            color_t kilo;
+            color_t mega;
+            color_t giga;
+            color_t tera;
+            color_t peta;
         } size;
 
         #ifdef USE_GIT
         struct git_t {
-            int ignore;
-            int conflict;
-            int modified;
-            int renamed;
-            int added;
-            int typechange;
-            int unreadable;
-            int untracked;
-            int unchanged;
-            int dir_dirty;
-            int dir_clean;
-            int repo_dirty;
-            int repo_clean;
+            color_t ignore;
+            color_t conflict;
+            color_t modified;
+            color_t renamed;
+            color_t added;
+            color_t typechange;
+            color_t unreadable;
+            color_t untracked;
+            color_t unchanged;
+            color_t dir_dirty;
+            color_t dir_clean;
+            color_t repo_dirty;
+            color_t repo_clean;
         } git;
         #endif
     } color;
 
     struct symbols_t {
+        struct prefix_t {
+            std::string exec;
+            std::string dir;
+            std::string link;
+        } prefix;
+
         struct user_t {
             std::string separator;
         } user;
@@ -229,11 +246,14 @@ private:
     static char fileTypeLetter(unsigned int mode);
     static char *lsPerms(unsigned int mode);
     static DateFormat timeAgo(int64_t ftime);
+    static DateFormat toDateFormat(std::string num, int unit);
+    static std::string colorize(std::string input, color_t color);
+    static unsigned int cleanlen(std::string input);
+
     std::string unitConv(float size);
     std::string findColor(const char *file);
     std::string getColor(const char *file, unsigned int mode);
     std::string colorperms(std::string input);
-    unsigned int cleanlen(std::string input);
 
     int fileHasAcl(char const *name, struct stat const *sb);
 };

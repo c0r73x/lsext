@@ -60,15 +60,41 @@ int wildcmp(const char *w, const char *s)
     return 0;
 }
 
+std::string Entry::colorize(std::string input, color_t color)
+{
+    if (settings.colors) {
+        std::string output;
+
+        if (color.fg >= 0) {
+            output = "\033[38;5;" + std::to_string(color.fg) + "m";
+        }
+
+        if (color.bg >= 0) {
+            output = "\033[48;5;" + std::to_string(color.bg) + "m";
+        }
+
+        if (color.bg < 0 && color.fg < 0) {
+            output = "\033[0m";
+        }
+
+        output += input;
+        output += "\033[0m";
+
+        return output;
+    }
+
+    return input;
+}
+
 unsigned int Entry::cleanlen(std::string input)
 {
     std::regex esc_re("\\033\\[[;0-9m]+");
     return std::regex_replace(
-        input,
-        esc_re,
-        "",
-        std::regex_constants::format_default
-    ).length();
+               input,
+               esc_re,
+               "",
+               std::regex_constants::format_default
+           ).length();
 }
 
 Entry::Entry(std::string directory, const char *file, char *fullpath,
@@ -106,7 +132,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         if (flags != UINT_MAX) {
             std::string symbol;
-            int color;
+            color_t color;
 
             if (S_ISDIR(st->st_mode)) {
                 if (flags & GIT_ISREPO) {
@@ -157,13 +183,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                 }
             }
 
-            if (settings.colors) {
-                this->git = "\033[38;5;" + std::to_string(color) + "m";
-                this->git += symbol;
-                this->git += "\033[0m";
-            } else {
-                this->git = symbol;
-            }
+            this->git = colorize(symbol, color);
         } else {
             this->git = ' ';
         }
@@ -209,7 +229,10 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                     this->target_color = findColor(SLK_MISSING);
 
                     if (!settings.list) {
-                        this->suffix = '@';
+                        this->suffix = colorize(
+                            settings.symbols.prefix.link,
+                            settings.color.prefix.link
+                        );
                     }
                 }
             }
@@ -220,28 +243,12 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         struct passwd *pw = getpwuid(st->st_uid);
         struct group  *gr = getgrgid(st->st_gid);
 
-        if (settings.colors) {
-            this->user = "\033[38;5;" + std::to_string(
-                             settings.color.user.user
-                         ) + "m";
-
-            this->user += pw->pw_name;
-            this->user += "\033[38;5;" + std::to_string(
-                              settings.color.user.separator
-                          ) + "m";
-
-            this->user += settings.symbols.user.separator;
-            this->user += "\033[38;5;" + std::to_string(
-                              settings.color.user.group
-                          ) + "m";
-
-            this->user += gr->gr_name;
-            this->user += "\033[0m";
-        } else {
-            this->user = pw->pw_name;
-            this->user += settings.symbols.user.separator;
-            this->user += gr->gr_name;
-        }
+        this->user = colorize(pw->pw_name, settings.color.user.user);
+        this->user += colorize(
+                          settings.symbols.user.separator,
+                          settings.color.user.separator
+                      );
+        this->user += colorize(gr->gr_name, settings.color.user.group);
 
         this->date = timeAgo(st->st_ctime);
         this->size = unitConv(st->st_size);
@@ -261,10 +268,16 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         this->isdir = false;
 
         if (S_ISDIR(st->st_mode)) {
-            this->suffix = '/';
+            this->suffix = colorize(
+                    settings.symbols.prefix.dir,
+                    settings.color.prefix.dir
+                    );
             this->isdir = true;
         } else if ((st->st_mode & S_IEXEC) != 0 && !islink) {
-            this->suffix = '*';
+            this->suffix = colorize(
+                    settings.symbols.prefix.exec,
+                    settings.color.prefix.exec
+                    );
         }
 
         this->file_len = cleanlen(file) + cleanlen(suffix) + cleanlen(git);
@@ -278,59 +291,57 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 std::string Entry::colorperms(std::string input)
 {
     std::string output;
-    std::string symbol;
+    color_t color;
 
     for (auto c : input) {
         switch (c) {
             case 'b':
-                symbol = std::to_string(settings.color.perm.block);
+                color = settings.color.perm.block;
                 break;
 
             case 'c':
-                symbol = std::to_string(settings.color.perm.special);
+                color = settings.color.perm.special;
                 break;
 
             case 's':
-                symbol = std::to_string(settings.color.perm.sticky);
+                color = settings.color.perm.sticky;
                 break;
 
             case 'l':
-                symbol = std::to_string(settings.color.perm.link);
+                color = settings.color.perm.link;
                 break;
 
             case 'd':
-                symbol = std::to_string(settings.color.perm.dir);
+                color = settings.color.perm.dir;
                 break;
 
             case '-':
-                symbol = std::to_string(settings.color.perm.none);
+                color = settings.color.perm.none;
                 break;
 
             case 'r':
-                symbol = std::to_string(settings.color.perm.read);
+                color = settings.color.perm.read;
                 break;
 
             case 'w':
-                symbol = std::to_string(settings.color.perm.write);
+                color = settings.color.perm.write;
                 break;
 
             case 'x':
             case 't':
-                symbol = std::to_string(settings.color.perm.exec);
+                color = settings.color.perm.exec;
                 break;
 
             case '?':
-                symbol = std::to_string(settings.color.perm.unknown);
+                color = settings.color.perm.unknown;
                 break;
 
             default:
-                symbol = std::to_string(settings.color.perm.other);
+                color = settings.color.perm.other;
                 break;
         }
 
-        output += "\033[38;5;" + symbol + "m";
-        output += c;
-        output += "\033[0m";
+        output += colorize(std::string(&c, 1), color);
     }
 
     return output;
@@ -589,7 +600,7 @@ std::string Entry::unitConv(float size)
         settings.symbols.size.peta.c_str(),
     };
 
-    static const int colors[] = {
+    static const color_t colors[] = {
         settings.color.size.byte,
         settings.color.size.kilo,
         settings.color.size.mega,
@@ -602,43 +613,32 @@ std::string Entry::unitConv(float size)
 
     for (unsigned int i = 0; i < sizeof(units); i++) {
         if ((size / 1024) <= 1.f) {
-            std::string c_symbol = "";
-            std::string c_unit = "";
+            char csize[PATH_MAX] = {0};
 
-            if (settings.colors && !settings.size_number_color) {
-                c_unit = "\033[38;5;" + std::to_string(
-                             gsl::at(colors, i)
-                         ) + "m";
-            } else if (settings.colors && settings.size_number_color) {
-                c_symbol = "\033[38;5;" + std::to_string(
-                               gsl::at(colors, i)
-                           ) + "m";
-                c_unit = "\033[38;5;" + std::to_string(
-                             settings.color.size.number
-                         ) + "m";
+            color_t c_symbol;
+            color_t c_unit;
+
+            if (!settings.size_number_color) {
+                c_unit = gsl::at(colors, i);
+                c_symbol = c_unit;
+            } else if (settings.size_number_color) {
+                c_symbol = gsl::at(colors, i);
+                c_unit = settings.color.size.number;
             }
 
             if (static_cast<int>(size * 10) % 10 == 0) {
-                snprintf(
-                    &unit[0],
-                    len,
-                    "%s%d%s%s\033[0m",
-                    c_unit.c_str(),
-                    static_cast<int>(size),
-                    c_symbol.c_str(),
-                    gsl::at(units, i)
-                );
+                snprintf(&csize[0], sizeof(csize), "%d", static_cast<int>(size));
             } else {
-                snprintf(
-                    &unit[0],
-                    len,
-                    "%s%.1f%s%s\033[0m",
-                    c_unit.c_str(),
-                    size,
-                    c_symbol.c_str(),
-                    gsl::at(units, i)
-                );
+                snprintf(&csize[0], sizeof(csize), "%.1f", size);
             }
+
+            snprintf(
+                &unit[0],
+                len,
+                "%s%s",
+                colorize(csize, c_unit).c_str(),
+                colorize(gsl::at(units, i), c_symbol).c_str()
+            );
 
             return &unit[0];
         }
@@ -650,10 +650,10 @@ std::string Entry::unitConv(float size)
     return &unit[0];
 }
 
-DateFormat toDateFormat(std::string num, int unit)
+DateFormat Entry::toDateFormat(std::string num, int unit)
 {
-    std::string c_symbol = "";
-    std::string c_unit = "";
+    color_t c_symbol;
+    color_t c_unit;
 
     static const char *units[] = {
         settings.symbols.date.sec.c_str(),
@@ -664,7 +664,7 @@ DateFormat toDateFormat(std::string num, int unit)
         settings.symbols.date.year.c_str(),
     };
 
-    static const int colors[] = {
+    static const color_t colors[] = {
         settings.color.date.sec,
         settings.color.date.min,
         settings.color.date.hour,
@@ -673,22 +673,17 @@ DateFormat toDateFormat(std::string num, int unit)
         settings.color.date.year,
     };
 
-    if (settings.colors && !settings.date_number_color) {
-        c_unit = "\033[38;5;" + std::to_string(
-                     gsl::at(colors, unit)
-                 ) + "m";
-    } else if (settings.colors && settings.date_number_color) {
-        c_symbol = "\033[38;5;" + std::to_string(
-                       gsl::at(colors, unit)
-                   ) + "m";
-        c_unit = "\033[38;5;" + std::to_string(
-                     settings.color.date.number
-                 ) + "m";
+    if (!settings.date_number_color) {
+        c_unit = gsl::at(colors, unit);
+        c_symbol = c_unit;
+    } else if (settings.date_number_color) {
+        c_symbol = gsl::at(colors, unit);
+        c_unit = settings.color.date.number;
     }
 
     return DateFormat(
-               c_unit + num,
-               c_symbol + gsl::at(units, unit) + "\033[0m"
+                colorize(num, c_unit),
+                colorize(gsl::at(units, unit), c_symbol)
            );
 }
 
