@@ -7,9 +7,9 @@
 #include <cstring>
 #include <ctime>
 #include <climits>
-#include <regex>
 
 #include <algorithm>
+#include <regex>
 
 #include <dirent.h>
 #include <grp.h>
@@ -230,8 +230,8 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
                     if (!settings.list) {
                         this->suffix = colorize(
-                            settings.symbols.prefix.link,
-                            settings.color.prefix.link
+                            settings.symbols.suffix.link,
+                            settings.color.suffix.link
                         );
                     }
                 }
@@ -269,14 +269,14 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         if (S_ISDIR(st->st_mode)) {
             this->suffix = colorize(
-                    settings.symbols.prefix.dir,
-                    settings.color.prefix.dir
+                    settings.symbols.suffix.dir,
+                    settings.color.suffix.dir
                     );
             this->isdir = true;
         } else if ((st->st_mode & S_IEXEC) != 0 && !islink) {
             this->suffix = colorize(
-                    settings.symbols.prefix.exec,
-                    settings.color.prefix.exec
+                    settings.symbols.suffix.exec,
+                    settings.color.suffix.exec
                     );
         }
 

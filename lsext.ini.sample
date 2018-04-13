@@ -9,6 +9,7 @@ list = 0
 resolve_links = 0
 reversed = 0
 dirs_first = 1
+resolve_repos = 1
 colors = 1
 
 ; default sort method 0 = Alpha, 1 = Modified, 2 = Size
@@ -16,9 +17,9 @@ sort = 0
 
 [colors]
 ; Use -1 for reset to default color and XXXXX_bg to set background color
-prefix_exec_fg = 10
-prefix_dir_fg = -1
-prefix_link_fg = -1
+suffix_exec_fg = 10
+suffix_dir_fg = -1
+suffix_link_fg = -1
 
 perm_none_fg = 0
 perm_exec_fg = 2
@@ -74,9 +75,9 @@ git_repo_dirty_fg = 1
 git_repo_clean_fg = 2
 
 [symbols]
-prefix_exec = "*"
-prefix_dir = "/"
-prefix_link = "@"
+suffix_exec = "*"
+suffix_dir = "/"
+suffix_link = "@"
 
 user_separator = ":"
 

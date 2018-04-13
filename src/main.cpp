@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <map>
+#include <regex>
 #include <sstream>
 #include <vector>
 
@@ -56,6 +57,10 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 {
     unsigned int flags = GIT_DIR_CLEAN;
 
+    if (!settings.resolve_repos) {
+        return UINT_MAX;
+    }
+
     git_status_options opts = GIT_STATUS_OPTIONS_INIT;
     opts.flags = (
                      GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
@@ -78,8 +83,14 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
                 return UINT_MAX;
             }
 
-            rp = root.ptr;
-            rp.replace(rp.end() - 5, rp.end(), ""); // Remove .git
+            std::regex root_re("/\\.git$");
+
+            rp = std::regex_replace(
+                     root.ptr,
+                     root_re,
+                     "",
+                     std::regex_constants::format_default
+                 );
         } else {
             git_buf_free(&root);
             return UINT_MAX;
@@ -138,8 +149,14 @@ Entry *addfile(const char *path, const char *file)
             return nullptr;
         }
 
-        rp = root.ptr;
-        rp.replace(rp.end() - 5, rp.end(), ""); // Remove .git
+        std::regex root_re("/\\.git$");
+
+        rp = std::regex_replace(
+                 root.ptr,
+                 root_re,
+                 "",
+                 std::regex_constants::format_default
+             );
     }
 
     #endif
@@ -225,22 +242,23 @@ Entry *addfile(const char *path, const char *file)
     if (repo != nullptr) {
         flags = 0;
         char dirpath[PATH_MAX] = {0};
-        if(!realpath((directory + file).c_str(), &dirpath[0])) {
+
+        if (!realpath((directory + file).c_str(), &dirpath[0])) {
             fprintf(
-                    stderr,
-                    "cannot access '%s': No such file or directory\n",
-                    file
-                   );
+                stderr,
+                "cannot access '%s': No such file or directory\n",
+                file
+            );
 
             git_repository_free(repo);
             git_buf_free(&root);
 
             return new Entry(
-                    directory,
-                    file,
-                    &fullpath[0],
-                    nullptr
-                );
+                       directory,
+                       file,
+                       &fullpath[0],
+                       nullptr
+                   );
         }
 
         std::string path = dirpath;
@@ -265,6 +283,7 @@ Entry *addfile(const char *path, const char *file)
             flags = dirflags(nullptr, "", directory + file);
         }
     }
+
     #endif
 
     return new Entry(
@@ -452,64 +471,98 @@ void loadconfig()
         ini = iniparser_load(filename);
     }
 
-    settings.size_number_color = iniparser_getboolean(ini, "settings:size_number_color", true);
-    settings.date_number_color = iniparser_getboolean(ini, "settings:date_number_color", true);
+    settings.size_number_color = iniparser_getboolean(ini,
+                                 "settings:size_number_color", true);
+    settings.date_number_color = iniparser_getboolean(ini,
+                                 "settings:date_number_color", true);
 
-    settings.show_hidden = iniparser_getboolean(ini, "settings:show_hidden", false);
+    settings.show_hidden = iniparser_getboolean(ini, "settings:show_hidden",
+                           false);
+    settings.show_hidden = iniparser_getboolean(ini, "settings:show_hidden",
+                           false);
     settings.list = iniparser_getboolean(ini, "settings:list", false);
-    settings.resolve_links = iniparser_getboolean(ini, "settings:resolve_links", false);
+    settings.resolve_links = iniparser_getboolean(ini, "settings:resolve_links",
+                             false);
+    settings.resolve_repos = iniparser_getboolean(ini, "settings:resolve_repos",
+                             true);
     settings.reversed = iniparser_getboolean(ini, "settings:reversed", false);
     settings.dirs_first = iniparser_getboolean(ini, "settings:dirs_first", true);
     settings.sort = static_cast<sort_t>(
-        iniparser_getint(ini, "settings:sort", SORT_ALPHA)
-    );
+                        iniparser_getint(ini, "settings:sort", SORT_ALPHA)
+                    );
 
     settings.colors = iniparser_getboolean(ini, "settings:colors", true);
 
-    settings.color.prefix.exec.fg = iniparser_getint(ini, "colors:prefix_exec_fg", 10);
-    settings.color.prefix.dir.fg = iniparser_getint(ini, "colors:prefix_dir_fg", -1);
-    settings.color.prefix.link.fg = iniparser_getint(ini, "colors:prefix_link_fg", -1);
+    settings.color.suffix.exec.fg = iniparser_getint(ini, "colors:suffix_exec_fg",
+                                    10);
+    settings.color.suffix.dir.fg = iniparser_getint(ini, "colors:suffix_dir_fg",
+                                   -1);
+    settings.color.suffix.link.fg = iniparser_getint(ini, "colors:suffix_link_fg",
+                                    -1);
 
-    settings.color.prefix.exec.bg = iniparser_getint(ini, "colors:prefix_exec_bg", -1);
-    settings.color.prefix.dir.bg = iniparser_getint(ini, "colors:prefix_dir_bg", -1);
-    settings.color.prefix.link.bg = iniparser_getint(ini, "colors:prefix_link_bg", -1);
+    settings.color.suffix.exec.bg = iniparser_getint(ini, "colors:suffix_exec_bg",
+                                    -1);
+    settings.color.suffix.dir.bg = iniparser_getint(ini, "colors:suffix_dir_bg",
+                                   -1);
+    settings.color.suffix.link.bg = iniparser_getint(ini, "colors:suffix_link_bg",
+                                    -1);
 
     settings.color.perm.none.fg = iniparser_getint(ini, "colors:perm_none_fg", 0);
     settings.color.perm.exec.fg = iniparser_getint(ini, "colors:perm_exec_fg", 2);
     settings.color.perm.read.fg = iniparser_getint(ini, "colors:perm_read_fg", 3);
-    settings.color.perm.write.fg = iniparser_getint(ini, "colors:perm_write_fg", 1);
+    settings.color.perm.write.fg = iniparser_getint(ini, "colors:perm_write_fg",
+                                   1);
 
-    settings.color.perm.none.bg = iniparser_getint(ini, "colors:perm_none_bg", -1);
-    settings.color.perm.exec.bg = iniparser_getint(ini, "colors:perm_exec_bg", -1);
-    settings.color.perm.read.bg = iniparser_getint(ini, "colors:perm_read_bg", -1);
-    settings.color.perm.write.bg = iniparser_getint(ini, "colors:perm_write_bg", -1);
+    settings.color.perm.none.bg = iniparser_getint(ini, "colors:perm_none_bg",
+                                  -1);
+    settings.color.perm.exec.bg = iniparser_getint(ini, "colors:perm_exec_bg",
+                                  -1);
+    settings.color.perm.read.bg = iniparser_getint(ini, "colors:perm_read_bg",
+                                  -1);
+    settings.color.perm.write.bg = iniparser_getint(ini, "colors:perm_write_bg",
+                                   -1);
 
     settings.color.perm.dir.fg = iniparser_getint(ini, "colors:perm_dir_fg", 4);
     settings.color.perm.link.fg = iniparser_getint(ini, "colors:perm_link_fg", 6);
-    settings.color.perm.sticky.fg = iniparser_getint(ini, "colors:perm_sticky_fg", 5);
-    settings.color.perm.special.fg = iniparser_getint(ini, "colors:perm_special_fg", 5);
-    settings.color.perm.block.fg = iniparser_getint(ini, "colors:perm_block_fg", 5);
-    settings.color.perm.unknown.fg = iniparser_getint(ini, "colors:perm_unknown_fg", 1);
-    settings.color.perm.other.fg = iniparser_getint(ini, "colors:perm_other_fg", 7);
+    settings.color.perm.sticky.fg = iniparser_getint(ini, "colors:perm_sticky_fg",
+                                    5);
+    settings.color.perm.special.fg = iniparser_getint(ini,
+                                     "colors:perm_special_fg", 5);
+    settings.color.perm.block.fg = iniparser_getint(ini, "colors:perm_block_fg",
+                                   5);
+    settings.color.perm.unknown.fg = iniparser_getint(ini,
+                                     "colors:perm_unknown_fg", 1);
+    settings.color.perm.other.fg = iniparser_getint(ini, "colors:perm_other_fg",
+                                   7);
 
     settings.color.perm.dir.bg = iniparser_getint(ini, "colors:perm_dir_bg", -1);
-    settings.color.perm.link.bg = iniparser_getint(ini, "colors:perm_link_bg", -1);
-    settings.color.perm.sticky.bg = iniparser_getint(ini, "colors:perm_sticky_bg", -1);
-    settings.color.perm.special.bg = iniparser_getint(ini, "colors:perm_special_bg", -1);
-    settings.color.perm.block.bg = iniparser_getint(ini, "colors:perm_block_bg", -1);
-    settings.color.perm.unknown.bg = iniparser_getint(ini, "colors:perm_unknown_bg", -1);
-    settings.color.perm.other.bg = iniparser_getint(ini, "colors:perm_other_bg", -1);
+    settings.color.perm.link.bg = iniparser_getint(ini, "colors:perm_link_bg",
+                                  -1);
+    settings.color.perm.sticky.bg = iniparser_getint(ini, "colors:perm_sticky_bg",
+                                    -1);
+    settings.color.perm.special.bg = iniparser_getint(ini,
+                                     "colors:perm_special_bg", -1);
+    settings.color.perm.block.bg = iniparser_getint(ini, "colors:perm_block_bg",
+                                   -1);
+    settings.color.perm.unknown.bg = iniparser_getint(ini,
+                                     "colors:perm_unknown_bg", -1);
+    settings.color.perm.other.bg = iniparser_getint(ini, "colors:perm_other_bg",
+                                   -1);
 
     settings.color.user.user.fg = iniparser_getint(ini, "colors:user_fg", 11);
     settings.color.user.group.fg = iniparser_getint(ini, "colors:group_fg", 3);
-    settings.color.user.separator.fg = iniparser_getint(ini, "colors:user_separator_fg", 0);
+    settings.color.user.separator.fg = iniparser_getint(ini,
+                                       "colors:user_separator_fg", 0);
 
     settings.color.user.user.bg = iniparser_getint(ini, "colors:user_bg", -1);
     settings.color.user.group.bg = iniparser_getint(ini, "colors:group_bg", -1);
-    settings.color.user.separator.bg = iniparser_getint(ini, "colors:user_separator_bg", -1);
+    settings.color.user.separator.bg = iniparser_getint(ini,
+                                       "colors:user_separator_bg", -1);
 
-    settings.color.size.number.fg = iniparser_getint(ini, "colors:size_number_fg", 12);
-    settings.color.size.number.bg = iniparser_getint(ini, "colors:size_number_bg", -1);
+    settings.color.size.number.fg = iniparser_getint(ini, "colors:size_number_fg",
+                                    12);
+    settings.color.size.number.bg = iniparser_getint(ini, "colors:size_number_bg",
+                                    -1);
 
     settings.color.size.byte.fg = iniparser_getint(ini, "colors:size_byte_fg", 4);
     settings.color.size.kilo.fg = iniparser_getint(ini, "colors:size_kilo_fg", 4);
@@ -518,15 +571,23 @@ void loadconfig()
     settings.color.size.tera.fg = iniparser_getint(ini, "colors:size_tera_fg", 4);
     settings.color.size.peta.fg = iniparser_getint(ini, "colors:size_peta_fg", 4);
 
-    settings.color.size.byte.bg = iniparser_getint(ini, "colors:size_byte_bg", -1);
-    settings.color.size.kilo.bg = iniparser_getint(ini, "colors:size_kilo_bg", -1);
-    settings.color.size.mega.bg = iniparser_getint(ini, "colors:size_mega_bg", -1);
-    settings.color.size.giga.bg = iniparser_getint(ini, "colors:size_giga_bg", -1);
-    settings.color.size.tera.bg = iniparser_getint(ini, "colors:size_tera_bg", -1);
-    settings.color.size.peta.bg = iniparser_getint(ini, "colors:size_peta_bg", -1);
+    settings.color.size.byte.bg = iniparser_getint(ini, "colors:size_byte_bg",
+                                  -1);
+    settings.color.size.kilo.bg = iniparser_getint(ini, "colors:size_kilo_bg",
+                                  -1);
+    settings.color.size.mega.bg = iniparser_getint(ini, "colors:size_mega_bg",
+                                  -1);
+    settings.color.size.giga.bg = iniparser_getint(ini, "colors:size_giga_bg",
+                                  -1);
+    settings.color.size.tera.bg = iniparser_getint(ini, "colors:size_tera_bg",
+                                  -1);
+    settings.color.size.peta.bg = iniparser_getint(ini, "colors:size_peta_bg",
+                                  -1);
 
-    settings.color.date.number.fg = iniparser_getint(ini, "colors:date_number_fg", 10);
-    settings.color.date.number.bg = iniparser_getint(ini, "colors:date_number_bg", -1);
+    settings.color.date.number.fg = iniparser_getint(ini, "colors:date_number_fg",
+                                    10);
+    settings.color.date.number.bg = iniparser_getint(ini, "colors:date_number_bg",
+                                    -1);
 
     settings.color.date.sec.fg = iniparser_getint(ini, "colors:date_sec_fg", 2);
     settings.color.date.min.fg = iniparser_getint(ini, "colors:date_min_fg", 2);
@@ -534,21 +595,29 @@ void loadconfig()
     settings.color.date.day.fg = iniparser_getint(ini, "colors:date_day_fg", 2);
     settings.color.date.mon.fg = iniparser_getint(ini, "colors:date_mon_fg", 2);
     settings.color.date.year.fg = iniparser_getint(ini, "colors:date_year_fg", 2);
-    settings.color.date.other.fg = iniparser_getint(ini, "colors:date_other_fg", 2);
+    settings.color.date.other.fg = iniparser_getint(ini, "colors:date_other_fg",
+                                   2);
 
     settings.color.date.sec.bg = iniparser_getint(ini, "colors:date_sec_bg", -1);
     settings.color.date.min.bg = iniparser_getint(ini, "colors:date_min_bg", -1);
-    settings.color.date.hour.bg = iniparser_getint(ini, "colors:date_hour_bg", -1);
+    settings.color.date.hour.bg = iniparser_getint(ini, "colors:date_hour_bg",
+                                  -1);
     settings.color.date.day.bg = iniparser_getint(ini, "colors:date_day_bg", -1);
     settings.color.date.mon.bg = iniparser_getint(ini, "colors:date_mon_bg", -1);
-    settings.color.date.year.bg = iniparser_getint(ini, "colors:date_year_bg", -1);
-    settings.color.date.other.bg = iniparser_getint(ini, "colors:date_other_bg", -1);
+    settings.color.date.year.bg = iniparser_getint(ini, "colors:date_year_bg",
+                                  -1);
+    settings.color.date.other.bg = iniparser_getint(ini, "colors:date_other_bg",
+                                   -1);
 
-    settings.symbols.user.separator = cpp11_getstring(ini, "symbols:user_separator", ":");
+    settings.symbols.user.separator = cpp11_getstring(ini,
+                                      "symbols:user_separator", ":");
 
-    settings.symbols.prefix.exec = cpp11_getstring(ini, "symbols:prefix_exec", "*");
-    settings.symbols.prefix.dir = cpp11_getstring(ini, "symbols:prefix_exec", "/");
-    settings.symbols.prefix.link = cpp11_getstring(ini, "symbols:prefix_exec", "@");
+    settings.symbols.suffix.exec = cpp11_getstring(ini, "symbols:prefix_exec",
+                                   "*");
+    settings.symbols.suffix.dir = cpp11_getstring(ini, "symbols:prefix_exec",
+                                  "/");
+    settings.symbols.suffix.link = cpp11_getstring(ini, "symbols:prefix_exec",
+                                   "@");
 
     settings.symbols.size.byte = cpp11_getstring(ini, "symbols:size_byte", "B");
     settings.symbols.size.kilo = cpp11_getstring(ini, "symbols:size_kilo", "K");
@@ -559,56 +628,94 @@ void loadconfig()
 
     settings.symbols.date.sec = cpp11_getstring(ini, "symbols:date_sec", "sec");
     settings.symbols.date.min = cpp11_getstring(ini, "symbols:date_min", "min");
-    settings.symbols.date.hour = cpp11_getstring(ini, "symbols:date_hour", "hour");
+    settings.symbols.date.hour = cpp11_getstring(ini, "symbols:date_hour",
+                                 "hour");
     settings.symbols.date.day = cpp11_getstring(ini, "symbols:date_day", "day");
     settings.symbols.date.mon = cpp11_getstring(ini, "symbols:date_mon", "mon");
-    settings.symbols.date.year = cpp11_getstring(ini, "symbols:date_year", "year");
+    settings.symbols.date.year = cpp11_getstring(ini, "symbols:date_year",
+                                 "year");
 
     #ifdef USE_GIT
     settings.symbols.git.ignore = cpp11_getstring(ini, "symbols:git_ignore", "!");
-    settings.symbols.git.conflict = cpp11_getstring(ini, "symbols:git_conflict", "X");
-    settings.symbols.git.modified = cpp11_getstring(ini, "symbols:git_modified", "~");
-    settings.symbols.git.renamed = cpp11_getstring(ini, "symbols:git_renamed", "R");
-    settings.symbols.git.added= cpp11_getstring(ini, "symbols:git_added", "+");
-    settings.symbols.git.typechange = cpp11_getstring(ini, "symbols:git_typechange", "T");
-    settings.symbols.git.unreadable = cpp11_getstring(ini, "symbols:git_unreadable", "-");
-    settings.symbols.git.untracked = cpp11_getstring(ini, "symbols:git_untracked", "?");
-    settings.symbols.git.unchanged = cpp11_getstring(ini, "symbols:git_unchanged", " ");
+    settings.symbols.git.conflict = cpp11_getstring(ini, "symbols:git_conflict",
+                                    "X");
+    settings.symbols.git.modified = cpp11_getstring(ini, "symbols:git_modified",
+                                    "~");
+    settings.symbols.git.renamed = cpp11_getstring(ini, "symbols:git_renamed",
+                                   "R");
+    settings.symbols.git.added = cpp11_getstring(ini, "symbols:git_added", "+");
+    settings.symbols.git.typechange = cpp11_getstring(ini,
+                                      "symbols:git_typechange", "T");
+    settings.symbols.git.unreadable = cpp11_getstring(ini,
+                                      "symbols:git_unreadable", "-");
+    settings.symbols.git.untracked = cpp11_getstring(ini, "symbols:git_untracked",
+                                     "?");
+    settings.symbols.git.unchanged = cpp11_getstring(ini, "symbols:git_unchanged",
+                                     " ");
 
-    settings.symbols.git.dir_dirty = cpp11_getstring(ini, "symbols:git_dir_dirty", "!");
-    settings.symbols.git.dir_clean = cpp11_getstring(ini, "symbols:git_dir_clean", " ");
-    settings.symbols.git.repo_dirty = cpp11_getstring(ini, "symbols:git_repo_dirty", "!");
-    settings.symbols.git.repo_clean = cpp11_getstring(ini, "symbols:git_repo_clean", "@");
+    settings.symbols.git.dir_dirty = cpp11_getstring(ini, "symbols:git_dir_dirty",
+                                     "!");
+    settings.symbols.git.dir_clean = cpp11_getstring(ini, "symbols:git_dir_clean",
+                                     " ");
+    settings.symbols.git.repo_dirty = cpp11_getstring(ini,
+                                      "symbols:git_repo_dirty", "!");
+    settings.symbols.git.repo_clean = cpp11_getstring(ini,
+                                      "symbols:git_repo_clean", "@");
 
-    settings.color.git.ignore.fg = iniparser_getint(ini, "colors:git_ignore_fg", 0);
-    settings.color.git.conflict.fg = iniparser_getint(ini, "colors:git_conflict_fg", 1);
-    settings.color.git.modified.fg = iniparser_getint(ini, "colors:git_modified_fg", 3);
-    settings.color.git.renamed.fg = iniparser_getint(ini, "colors:git_renamed_fg", 5);
+    settings.color.git.ignore.fg = iniparser_getint(ini, "colors:git_ignore_fg",
+                                   0);
+    settings.color.git.conflict.fg = iniparser_getint(ini,
+                                     "colors:git_conflict_fg", 1);
+    settings.color.git.modified.fg = iniparser_getint(ini,
+                                     "colors:git_modified_fg", 3);
+    settings.color.git.renamed.fg = iniparser_getint(ini, "colors:git_renamed_fg",
+                                    5);
     settings.color.git.added.fg = iniparser_getint(ini, "colors:git_added_fg", 2);
-    settings.color.git.typechange.fg = iniparser_getint(ini, "colors:git_typechange_fg", 4);
-    settings.color.git.unreadable.fg = iniparser_getint(ini, "colors:git_unreadable_fg", 9);
-    settings.color.git.untracked.fg = iniparser_getint(ini, "colors:git_untracked_fg", 8);
-    settings.color.git.unchanged.fg = iniparser_getint(ini, "colors:git_unchanged_fg", 0);
+    settings.color.git.typechange.fg = iniparser_getint(ini,
+                                       "colors:git_typechange_fg", 4);
+    settings.color.git.unreadable.fg = iniparser_getint(ini,
+                                       "colors:git_unreadable_fg", 9);
+    settings.color.git.untracked.fg = iniparser_getint(ini,
+                                      "colors:git_untracked_fg", 8);
+    settings.color.git.unchanged.fg = iniparser_getint(ini,
+                                      "colors:git_unchanged_fg", 0);
 
-    settings.color.git.dir_dirty.fg = iniparser_getint(ini, "colors:git_dir_dirty_fg", 1);
-    settings.color.git.dir_clean.fg = iniparser_getint(ini, "colors:git_dir_clean_fg", 0);
-    settings.color.git.repo_dirty.fg = iniparser_getint(ini, "colors:git_repo_dirty_fg", 1);
-    settings.color.git.repo_clean.fg = iniparser_getint(ini, "colors:git_repo_clean_fg", 2);
+    settings.color.git.dir_dirty.fg = iniparser_getint(ini,
+                                      "colors:git_dir_dirty_fg", 1);
+    settings.color.git.dir_clean.fg = iniparser_getint(ini,
+                                      "colors:git_dir_clean_fg", 0);
+    settings.color.git.repo_dirty.fg = iniparser_getint(ini,
+                                       "colors:git_repo_dirty_fg", 1);
+    settings.color.git.repo_clean.fg = iniparser_getint(ini,
+                                       "colors:git_repo_clean_fg", 2);
 
-    settings.color.git.ignore.bg = iniparser_getint(ini, "colors:git_ignore_bg", -1);
-    settings.color.git.conflict.bg = iniparser_getint(ini, "colors:git_conflict_bg", -1);
-    settings.color.git.modified.bg = iniparser_getint(ini, "colors:git_modified_bg", -1);
-    settings.color.git.renamed.bg = iniparser_getint(ini, "colors:git_renamed_bg", -1);
-    settings.color.git.added.bg = iniparser_getint(ini, "colors:git_added_bg", -1);
-    settings.color.git.typechange.bg = iniparser_getint(ini, "colors:git_typechange_bg", -1);
-    settings.color.git.unreadable.bg = iniparser_getint(ini, "colors:git_unreadable_bg", -1);
-    settings.color.git.untracked.bg = iniparser_getint(ini, "colors:git_untracked_bg", -1);
-    settings.color.git.unchanged.bg = iniparser_getint(ini, "colors:git_unchanged_bg", -1);
+    settings.color.git.ignore.bg = iniparser_getint(ini, "colors:git_ignore_bg",
+                                   -1);
+    settings.color.git.conflict.bg = iniparser_getint(ini,
+                                     "colors:git_conflict_bg", -1);
+    settings.color.git.modified.bg = iniparser_getint(ini,
+                                     "colors:git_modified_bg", -1);
+    settings.color.git.renamed.bg = iniparser_getint(ini, "colors:git_renamed_bg",
+                                    -1);
+    settings.color.git.added.bg = iniparser_getint(ini, "colors:git_added_bg",
+                                  -1);
+    settings.color.git.typechange.bg = iniparser_getint(ini,
+                                       "colors:git_typechange_bg", -1);
+    settings.color.git.unreadable.bg = iniparser_getint(ini,
+                                       "colors:git_unreadable_bg", -1);
+    settings.color.git.untracked.bg = iniparser_getint(ini,
+                                      "colors:git_untracked_bg", -1);
+    settings.color.git.unchanged.bg = iniparser_getint(ini,
+                                      "colors:git_unchanged_bg", -1);
 
-    settings.color.git.dir_dirty.bg = iniparser_getint(ini, "colors:git_dir_dirty_bg", -1);
-    settings.color.git.dir_clean.bg = iniparser_getint(ini, "colors:git_dir_clean_bg", -1);
-    settings.color.git.repo_dirty.bg = iniparser_getint(ini, "colors:git_repo_dirty_bg", -1);
-    settings.color.git.repo_clean.bg = iniparser_getint(ini, "colors:git_repo_clean_bg", -1);
+    settings.color.git.dir_dirty.bg = iniparser_getint(ini,
+                                      "colors:git_dir_dirty_bg", -1);
+    settings.color.git.dir_clean.bg = iniparser_getint(ini,
+                                      "colors:git_dir_clean_bg", -1);
+    settings.color.git.repo_dirty.bg = iniparser_getint(ini,
+                                       "colors:git_repo_dirty_bg", -1);
+    settings.color.git.repo_clean.bg = iniparser_getint(ini,
+                                       "colors:git_repo_clean_bg", -1);
     #endif
 
     iniparser_freedict(ini);

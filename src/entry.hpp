@@ -67,6 +67,7 @@ struct color_t {
 
 struct settings_t {
     bool resolve_links;
+    bool resolve_repos;
     bool show_hidden;
     bool reversed;
     bool dirs_first;
@@ -77,11 +78,11 @@ struct settings_t {
     sort_t sort;
 
     struct colors_t {
-        struct prefix_t {
+        struct suffix_t {
             color_t exec;
             color_t dir;
             color_t link;
-        } prefix;
+        } suffix;
 
         struct date_t {
             color_t number;
@@ -147,11 +148,11 @@ struct settings_t {
     } color;
 
     struct symbols_t {
-        struct prefix_t {
+        struct suffix_t {
             std::string exec;
             std::string dir;
             std::string link;
-        } prefix;
+        } suffix;
 
         struct user_t {
             std::string separator;
