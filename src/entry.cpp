@@ -88,7 +88,7 @@ std::string Entry::colorize(std::string input, color_t color)
 
 unsigned int Entry::cleanlen(std::string input)
 {
-    std::regex esc_re("\\033\\[[;0-9m]+");
+    std::regex esc_re("\033\\[[;0-9]+m");
     return std::regex_replace(
                input,
                esc_re,
@@ -230,9 +230,9 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
                     if (!settings.list) {
                         this->suffix = colorize(
-                            settings.symbols.suffix.link,
-                            settings.color.suffix.link
-                        );
+                                           settings.symbols.suffix.link,
+                                           settings.color.suffix.link
+                                       );
                     }
                 }
             }
@@ -259,28 +259,29 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         this->file = file;
 
-        this->user_len = cleanlen(this->user);
-        this->date_len = cleanlen(this->date.first);
-        this->date_unit_len = cleanlen(this->date.second);
-        this->size_len = cleanlen(this->size);
+        this->user_len = this->user.length();
+        this->date_len = this->date.first.length();
+        this->date_unit_len = this->date.second.length();
+        this->size_len = this->size.length();
 
         this->prefix = (fileHasAcl(fullpath, st) > 0) ? '+' : ' ';
         this->isdir = false;
 
         if (S_ISDIR(st->st_mode)) {
             this->suffix = colorize(
-                    settings.symbols.suffix.dir,
-                    settings.color.suffix.dir
-                    );
+                               settings.symbols.suffix.dir,
+                               settings.color.suffix.dir
+                           );
             this->isdir = true;
         } else if ((st->st_mode & S_IEXEC) != 0 && !islink) {
             this->suffix = colorize(
-                    settings.symbols.suffix.exec,
-                    settings.color.suffix.exec
-                    );
+                               settings.symbols.suffix.exec,
+                               settings.color.suffix.exec
+                           );
         }
 
-        this->file_len = cleanlen(file) + cleanlen(suffix) + cleanlen(git);
+        this->file_len = (color + file + suffix + git).length();
+        this->clean_len = cleanlen(color + file + suffix + git);
     }
 
     if (settings.colors) {
@@ -350,7 +351,7 @@ std::string Entry::colorperms(std::string input)
 void Entry::list(int max_user, int max_date, int max_date_unit, int max_size)
 {
     printf(
-        " %s%s    %-*s   %-*s%-*s %*s  %s%s%s\033[0m%s%s%s\033[0m\n",
+        " %s%s    %-*s   %-*s%-*s %*s  %s%s%s%s%s%s\n",
         perms.c_str(),
         prefix.c_str(),
         (max_user + 1),
@@ -377,13 +378,9 @@ void Entry::list(int max_user, int max_date, int max_date_unit, int max_size)
 
 void Entry::print(int max_len)
 {
-    printf(
-        "%s%s%-*s\033[0m",
-        git.c_str(),
-        color.c_str(),
-        (max_len),
-        (file + suffix).c_str()
-    );
+    std::string combined = git + color + file + suffix;
+    int len = cleanlen(combined);
+    printf("%s", (combined + std::string(max_len - len, ' ')).c_str());
 }
 
 std::string Entry::findColor(const char *file)
@@ -590,7 +587,7 @@ char *Entry::lsPerms(unsigned int mode)
 
 std::string Entry::unitConv(float size)
 {
-    static char unit[40] = {0};
+    std::string unit;
     static const char *units[] = {
         settings.symbols.size.byte.c_str(),
         settings.symbols.size.kilo.c_str(),
@@ -609,11 +606,10 @@ std::string Entry::unitConv(float size)
         settings.color.size.peta,
     };
 
-    unsigned int len = sizeof(unit);
+    char csize[PATH_MAX] = {0};
 
     for (unsigned int i = 0; i < sizeof(units); i++) {
         if ((size / 1024) <= 1.f) {
-            char csize[PATH_MAX] = {0};
 
             color_t c_symbol;
             color_t c_unit;
@@ -632,22 +628,17 @@ std::string Entry::unitConv(float size)
                 snprintf(&csize[0], sizeof(csize), "%.1f", size);
             }
 
-            snprintf(
-                &unit[0],
-                len,
-                "%s%s",
-                colorize(csize, c_unit).c_str(),
-                colorize(gsl::at(units, i), c_symbol).c_str()
-            );
+            unit = colorize(csize, c_unit) +
+                   colorize(gsl::at(units, i), c_symbol);
 
-            return &unit[0];
+            return unit;
         }
 
         size /= 1024;
     }
 
-    snprintf(&unit[0], len, "%.2g?", size);
-    return &unit[0];
+    snprintf(&csize[0], strlen(csize), "%.2g?", size);
+    return csize;
 }
 
 DateFormat Entry::toDateFormat(std::string num, int unit)
@@ -682,8 +673,8 @@ DateFormat Entry::toDateFormat(std::string num, int unit)
     }
 
     return DateFormat(
-                colorize(num, c_unit),
-                colorize(gsl::at(units, unit), c_symbol)
+               colorize(num, c_unit),
+               colorize(gsl::at(units, unit), c_symbol)
            );
 }
 

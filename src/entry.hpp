@@ -228,6 +228,7 @@ public:
 
     size_t size_len;
     size_t file_len;
+    size_t clean_len;
 
     void list(int max_user, int max_date, int max_date_unit, int max_size);
     void print(int max_len);

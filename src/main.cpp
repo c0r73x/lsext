@@ -387,10 +387,10 @@ void printdir(FileList *lst)
         size_t max_len = 0;
 
         for (const auto l : *lst) {
-            max_len = std::max(l->file_len, max_len);
+            max_len = std::max(l->clean_len, max_len);
         }
 
-        int calc = ((float)w.ws_col / (float)max_len) - 1;
+        int calc = ((float)w.ws_col / (float)max_len);
         int columns = std::max(calc, 1);
 
         int current = 0;
