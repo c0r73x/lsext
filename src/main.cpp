@@ -680,7 +680,6 @@ int main(int argc, const char *argv[])
             case 'N':
                 settings.no_conf = true;
                 loadconfig();
-                parse = false;
                 break;
 
             case 'h':
