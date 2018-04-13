@@ -76,6 +76,9 @@ struct settings_t {
     bool colors;
     bool size_number_color;
     bool date_number_color;
+
+    bool no_conf;
+
     sort_t sort;
 
     struct colors_t {

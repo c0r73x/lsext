@@ -452,29 +452,23 @@ void loadconfig()
         sprintf(filename, "./lsext.ini"); // Useful when debugging
     }
 
-    if (exists(filename)) {
+    if (exists(filename) && !settings.no_conf) {
         ini = iniparser_load(filename);
     }
 
-    settings.size_number_color = iniparser_getboolean(ini,
-                                 "settings:size_number_color", true);
-    settings.date_number_color = iniparser_getboolean(ini,
-                                 "settings:date_number_color", true);
+    settings.size_number_color = iniparser_getboolean(ini, "settings:size_number_color", true);
+    settings.date_number_color = iniparser_getboolean(ini, "settings:date_number_color", true);
 
-    settings.show_hidden = iniparser_getboolean(ini, "settings:show_hidden",
-                           false);
-    settings.show_hidden = iniparser_getboolean(ini, "settings:show_hidden",
-                           false);
+    settings.show_hidden = iniparser_getboolean(ini, "settings:show_hidden", false);
+    settings.show_hidden = iniparser_getboolean(ini, "settings:show_hidden", false);
     settings.list = iniparser_getboolean(ini, "settings:list", false);
-    settings.resolve_links = iniparser_getboolean(ini, "settings:resolve_links",
-                             false);
-    settings.resolve_repos = iniparser_getboolean(ini, "settings:resolve_repos",
-                             true);
+    settings.resolve_links = iniparser_getboolean(ini, "settings:resolve_links", false);
+    settings.resolve_repos = iniparser_getboolean(ini, "settings:resolve_repos", true);
     settings.reversed = iniparser_getboolean(ini, "settings:reversed", false);
     settings.dirs_first = iniparser_getboolean(ini, "settings:dirs_first", true);
     settings.sort = static_cast<sort_t>(
-                        iniparser_getint(ini, "settings:sort", SORT_ALPHA)
-                    );
+        iniparser_getint(ini, "settings:sort", SORT_ALPHA)
+    );
 
     settings.colors = iniparser_getboolean(ini, "settings:colors", true);
 
@@ -637,12 +631,14 @@ int main(int argc, const char *argv[])
     FileList files;
     DirList dirs;
 
+    settings.no_conf = false;
+
     loadconfig();
 
     bool parse = true;
 
     while (parse) {
-        int c = getopt(argc, const_cast<char **>(argv), "AalrtfSLnh");
+        int c = getopt(argc, const_cast<char **>(argv), "AalrtfSLnhN");
 
         switch (c) {
             case 'L':
@@ -679,6 +675,12 @@ int main(int argc, const char *argv[])
 
             case 'n':
                 settings.colors = !settings.colors;
+                break;
+
+            case 'N':
+                settings.no_conf = true;
+                loadconfig();
+                parse = false;
                 break;
 
             case 'h':
