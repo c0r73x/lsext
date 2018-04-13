@@ -7,6 +7,7 @@
 #include <cstring>
 #include <ctime>
 #include <climits>
+#include <regex>
 
 #include <algorithm>
 
@@ -59,6 +60,17 @@ int wildcmp(const char *w, const char *s)
     return 0;
 }
 
+unsigned int Entry::cleanlen(std::string input)
+{
+    std::regex esc_re("\\033\\[[;0-9m]+");
+    return std::regex_replace(
+        input,
+        esc_re,
+        "",
+        std::regex_constants::format_default
+    ).length();
+}
+
 Entry::Entry(std::string directory, const char *file, char *fullpath,
              struct stat *st, unsigned int flags)
 {
@@ -87,6 +99,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         if (settings.colors) {
             this->color = getColor(file, st->st_mode);
         }
+
         this->suffix = ' ';
 
         #ifdef USE_GIT
@@ -239,10 +252,10 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         this->file = file;
 
-        this->user_len = this->user.length();
-        this->date_len = this->date.first.length();
-        this->date_unit_len = this->date.second.length();
-        this->size_len = this->size.length();
+        this->user_len = cleanlen(this->user);
+        this->date_len = cleanlen(this->date.first);
+        this->date_unit_len = cleanlen(this->date.second);
+        this->size_len = cleanlen(this->size);
 
         this->prefix = (fileHasAcl(fullpath, st) > 0) ? '+' : ' ';
         this->isdir = false;
@@ -254,7 +267,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
             this->suffix = '*';
         }
 
-        this->file_len = strlen(file) + suffix.length();
+        this->file_len = cleanlen(file) + cleanlen(suffix) + cleanlen(git);
     }
 
     if (settings.colors) {
@@ -353,8 +366,6 @@ void Entry::list(int max_user, int max_date, int max_date_unit, int max_size)
 
 void Entry::print(int max_len)
 {
-    /* max_len += + strlen("\033[0m") * 2; */
-
     printf(
         "%s%s%-*s\033[0m",
         git.c_str(),

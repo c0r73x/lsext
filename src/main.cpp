@@ -130,10 +130,10 @@ Entry *addfile(const char *path, const char *file)
 
     int error = git_repository_discover(&root, directory.c_str(), 0, NULL);
 
-    if (error >= 0) {
+    if (error == 0) {
         error = git_repository_open(&repo, root.ptr);
 
-        if (error < 0) {
+        if (error != 0) {
             fprintf(stderr, "Unable to open git repository at %s", root.ptr);
             return nullptr;
         }
@@ -257,14 +257,14 @@ Entry *addfile(const char *path, const char *file)
         } else {
             git_status_file(&flags, repo, path.c_str());
         }
+
+        /* git_repository_free(repo); */
+        git_buf_free(&root);
     } else {
         if (S_ISDIR(st.st_mode)) {
             flags = dirflags(nullptr, "", directory + file);
         }
     }
-
-    git_repository_free(repo);
-    git_buf_free(&root);
     #endif
 
     return new Entry(
@@ -371,8 +371,7 @@ void printdir(FileList *lst)
             max_len = std::max(l->file_len, max_len);
         }
 
-        /* max_len += 10; // for icons, colors etc. */
-        int calc = ((float)w.ws_col / (float)max_len) - 2;
+        int calc = ((float)w.ws_col / (float)max_len) - 1;
         int columns = std::max(calc, 1);
 
         int current = 0;

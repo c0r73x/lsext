@@ -233,6 +233,7 @@ private:
     std::string findColor(const char *file);
     std::string getColor(const char *file, unsigned int mode);
     std::string colorperms(std::string input);
+    unsigned int cleanlen(std::string input);
 
     int fileHasAcl(char const *name, struct stat const *sb);
 };
