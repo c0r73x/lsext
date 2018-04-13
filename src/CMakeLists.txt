@@ -27,6 +27,7 @@ include_directories(
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${COMMON_SRC})
+install(TARGETS ${CMAKE_PROJECT_NAME} RUNTIME DESTINATION bin)
 
 target_link_libraries(
     ${CMAKE_PROJECT_NAME}
