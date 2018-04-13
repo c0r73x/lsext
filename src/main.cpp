@@ -115,7 +115,7 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     for (size_t i = 0; i < count; ++i) {
         const git_status_entry *entry = git_status_byindex(statuses, i);
 
-        if (entry->status & ~GIT_STATUS_IGNORED && entry->status != 0) {
+        if (entry->status != 0) {
             flags |= GIT_DIR_DIRTY;
             break;
         }
