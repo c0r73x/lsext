@@ -179,6 +179,11 @@ Entry *addfile(const char *path, const char *file)
                     file
                 );
 
+                #ifdef USE_GIT
+                git_repository_free(repo);
+                git_buf_free(&root);
+                #endif
+
                 return new Entry(
                            directory,
                            file,
@@ -193,6 +198,11 @@ Entry *addfile(const char *path, const char *file)
                     "cannot access '%s': No such file or directory\n",
                     file
                 );
+
+                #ifdef USE_GIT
+                git_repository_free(repo);
+                git_buf_free(&root);
+                #endif
 
                 return new Entry(
                            directory,
@@ -222,6 +232,9 @@ Entry *addfile(const char *path, const char *file)
                     file
                    );
 
+            git_repository_free(repo);
+            git_buf_free(&root);
+
             return new Entry(
                     directory,
                     file,
@@ -250,6 +263,8 @@ Entry *addfile(const char *path, const char *file)
         }
     }
 
+    git_repository_free(repo);
+    git_buf_free(&root);
     #endif
 
     return new Entry(
@@ -259,11 +274,6 @@ Entry *addfile(const char *path, const char *file)
                &st,
                flags
            );
-
-    #ifdef USE_GIT
-    git_repository_free(repo);
-    git_buf_free(&root);
-    #endif
 }
 
 FileList listdir(const char *path)
