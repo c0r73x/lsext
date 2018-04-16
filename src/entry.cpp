@@ -8,8 +8,7 @@
 #include <ctime>
 #include <climits>
 
-#include <algorithm>
-#include <regex>
+#include <pcrecpp.h>
 
 #include <dirent.h>
 #include <grp.h>
@@ -89,13 +88,13 @@ std::string Entry::colorize(std::string input, color_t color)
 
 unsigned int Entry::cleanlen(std::string input)
 {
-    std::regex esc_re("\033\\[[;0-9]*m");
-    return std::regex_replace(
-               input,
-               esc_re,
-               "",
-               std::regex_constants::format_default
-           ).length();
+    std::string tmp = input;
+    pcrecpp::RE re("\033\\[[;0-9]*m");
+    if (re.Replace("", &tmp)) {
+        return tmp.length();
+    }
+
+    return 0;
 }
 
 Entry::Entry(std::string directory, const char *file, char *fullpath,

@@ -286,7 +286,7 @@ FileList listdir(const char *path)
     std::string pattern = std::string(path) + "/*";
     glob(pattern.c_str(), GLOB_TILDE, NULL, &res);
 
-    /* #pragma omp parallel for shared(lst) */
+    #pragma omp parallel for shared(lst)
     for(unsigned int i = 0; i < res.gl_pathc; i++) {
         const char *file = basename(res.gl_pathv[i]);
 
@@ -304,6 +304,7 @@ FileList listdir(const char *path)
         auto f = addfile(path, file);
 
         if (f != nullptr) {
+            #pragma omp critical
             lst.push_back(f);
         }
     }

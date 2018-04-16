@@ -38,4 +38,5 @@ target_link_libraries(
     ${CMAKE_PROJECT_NAME}
     ${GIT2_LIBRARY}
     ${INIPARSER_LIBRARY}
+    pcrecpp
 )

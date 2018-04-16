@@ -31,5 +31,7 @@
 *.out
 *.app
 
+callgrind.out.*
+
 build
 lsext.ini
