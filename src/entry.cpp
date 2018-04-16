@@ -112,7 +112,7 @@ unsigned int Entry::cleanlen(std::string input)
         return tmp.length();
     }
 
-    return 0;
+    return input.length();
 }
 
 Entry::Entry(std::string directory, const char *file, char *fullpath,
@@ -237,8 +237,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                 struct stat tst = {0};
 
                 if ((lstat(path.c_str(), &tst)) < 0) {
-                    this->color = findColor(SLK_ORPHAN);
-                    this->target_color = findColor(SLK_ORPHAN);
+                    this->target_color = this->color;
                 } else {
                     this->color = getColor(file, tst.st_mode);
                     this->target_color = getColor(&target[0], tst.st_mode);
