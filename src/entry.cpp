@@ -88,9 +88,10 @@ std::string Entry::colorize(std::string input, color_t color)
 
 unsigned int Entry::cleanlen(std::string input)
 {
+    static pcrecpp::RE re("\033\\[[;0-9]*m");
     std::string tmp = input;
-    pcrecpp::RE re("\033\\[[;0-9]*m");
-    if (re.Replace("", &tmp)) {
+
+    if (re.GlobalReplace("", &tmp)) {
         return tmp.length();
     }
 
