@@ -7,6 +7,7 @@
 #include <cstring>
 #include <ctime>
 #include <climits>
+#include <algorithm>
 
 #include <pcrecpp.h>
 
@@ -26,7 +27,7 @@
     #include <git2.h>
 #endif
 
-std::vector<Color> colors;
+std::map<std::string, std::string> colors;
 
 int wildcmp(const char *w, const char *s)
 {
@@ -398,17 +399,18 @@ void Entry::print(int max_len)
 
 std::string Entry::findColor(const char *file)
 {
-    for (auto c : colors) {
-        if (wildcmp(c.glob.c_str(), file) == 0) {
-            return "\033[" + c.color + "m";
+    auto c = std::find_if(colors.begin(), colors.end(), 
+            [file](const std::pair<std::string, std::string> &t) -> bool {
+                return wildcmp(t.first.c_str(), file) == 0;
+            }
+        );
 
-        }
+    if (c == colors.end()) {
+        c = colors.find("fi");
     }
 
-    for (auto c : colors) {
-        if (wildcmp(c.glob.c_str(), "fi") == 0) {
-            return "\033[" + c.color + "m";
-        }
+    if (c != colors.end()) {
+        return "\033[" + c->second + "m";
     }
 
     return "\033[0m";

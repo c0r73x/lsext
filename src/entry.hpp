@@ -41,11 +41,6 @@
 
 using DateFormat = std::pair<std::string, std::string>;
 
-struct Color {
-    std::string glob;
-    std::string color;
-};
-
 enum sort_t {
     SORT_ALPHA,
     SORT_MODIFIED,
@@ -78,6 +73,8 @@ struct settings_t {
     bool date_number_color;
 
     bool no_conf;
+
+    int forced_columns;
 
     sort_t sort;
 
@@ -207,7 +204,7 @@ struct settings_t {
 };
 
 extern settings_t settings;
-extern std::vector<Color> colors;
+extern std::map<std::string, std::string> colors;
 
 class Entry
 {

@@ -39,14 +39,10 @@ void initcolors()
     ss << ls_colors;
 
     std::string token;
-    Color color;
 
     while (std::getline(ss, token, ':')) {
         size_t pos = token.find('=');
-
-        color.glob = token.substr(0, pos);
-        color.color = token.substr(pos + 1);
-        colors.push_back(color);
+        colors[token.substr(0, pos)] = token.substr(pos + 1);
     }
 
     /* for (auto c : colors) { */
@@ -366,8 +362,14 @@ void printdir(FileList *lst)
         }
 
         max_len += 1;
-        int calc = ((float)w.ws_col / (float)max_len);
-        int columns = std::max(calc, 1);
+        int columns = 0;
+
+        if (settings.forced_columns > 0) {
+            columns = settings.forced_columns;
+        } else {
+            int calc = ((float)w.ws_col / (float)max_len);
+            columns = std::max(calc, 1);
+        }
 
         int current = 0;
 
@@ -448,6 +450,8 @@ void loadconfig()
     if (exists(filename) && !settings.no_conf) {
         ini = iniparser_load(filename);
     }
+
+    settings.forced_columns = 0;
 
     settings.size_number_color = iniparser_getboolean(ini, "settings:size_number_color", true);
     settings.date_number_color = iniparser_getboolean(ini, "settings:date_number_color", true);
@@ -631,9 +635,13 @@ int main(int argc, const char *argv[])
     bool parse = true;
 
     while (parse) {
-        int c = getopt(argc, const_cast<char **>(argv), "AalrtfSLnhN");
+        int c = getopt(argc, const_cast<char **>(argv), "AalrtfSLnhNc:");
 
         switch (c) {
+            case 'c':
+                settings.forced_columns = atoi(optarg);
+                break;
+
             case 'L':
                 settings.resolve_links = !settings.resolve_links;
                 break;
