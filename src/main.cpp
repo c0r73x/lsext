@@ -266,26 +266,19 @@ Entry *addfile(const char *path, const char *file)
            );
 }
 
-FileList listdir(const char *path)
+FileList listdir(const char *path, std::string fp = "/*", bool hidden = false)
 {
     FileList lst;
     glob_t res;
 
-    std::string pattern = std::string(path) + "/*";
-    glob(pattern.c_str(), GLOB_TILDE, NULL, &res);
+    std::string pattern = std::string(path) + fp;
+    glob(pattern.c_str(), GLOB_NOSORT, NULL, &res);
 
     #pragma omp parallel for shared(lst)
     for(unsigned int i = 0; i < res.gl_pathc; i++) {
         const char *file = basename(res.gl_pathv[i]);
 
-        if (
-            strcmp(file, ".") == 0 ||
-            strcmp(file, "..") == 0
-        ) {
-            continue;
-        }
-
-        if (file[0] == '.' && !settings.show_hidden) {
+        if (file[0] == '.' && (file[1] == 0 || file[1] == '.')) {
             continue;
         }
 
@@ -295,6 +288,14 @@ FileList listdir(const char *path)
             #pragma omp critical
             lst.push_back(f);
         }
+    }
+
+    globfree(&res);
+
+    if (settings.show_hidden && !hidden) {
+        FileList dotfiles = listdir(path, "/.*", true);
+        lst.reserve(lst.size() + dotfiles.size());
+        lst.insert(lst.end(), dotfiles.begin(), dotfiles.end());
     }
 
     return lst;
