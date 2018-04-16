@@ -79,7 +79,7 @@ starCheck:
     goto loopStart;
 }
 
-std::string Entry::colorize(std::string input, color_t color)
+std::string Entry::colorize(std::string input, color_t color, bool ending)
 {
     if (settings.colors) {
         std::string output;
@@ -97,7 +97,10 @@ std::string Entry::colorize(std::string input, color_t color)
         }
 
         output += input;
-        output += "\033[0m";
+
+        if (ending) {
+            output += "\033[0m";
+        }
 
         return output;
     }
@@ -168,13 +171,28 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                         color = settings.color.git.repo_clean;
                         symbol = settings.symbols.git.repo_clean;
                     }
+
+                    if (settings.override_git_repo_color) {
+                        this->color = colorize(symbol, color, false);
+                    } else {
+                        this->git = colorize(symbol, color);
+                    }
                 } else {
                     if (flags & GIT_DIR_DIRTY) {
                         color = settings.color.git.dir_dirty;
                         symbol = settings.symbols.git.dir_dirty;
+                    } else if (flags & GIT_STATUS_IGNORED) {
+                        color = settings.color.git.ignore;
+                        symbol = settings.symbols.git.ignore;
                     } else {
                         color = settings.color.git.dir_clean;
                         symbol = settings.symbols.git.dir_clean;
+                    }
+
+                    if (settings.override_git_dir_color) {
+                        this->color = colorize(symbol, color, false);
+                    } else {
+                        this->git = colorize(symbol, color);
                     }
                 }
             } else {
@@ -206,9 +224,9 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                     color = settings.color.git.unchanged;
                     symbol = settings.symbols.git.unchanged;
                 }
-            }
 
-            this->git = colorize(symbol, color);
+                this->git = colorize(symbol, color);
+            }
         } else {
             this->git = ' ';
         }

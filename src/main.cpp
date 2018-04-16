@@ -240,7 +240,8 @@ Entry *addfile(const char *path, const char *file)
             }
 
             if (S_ISDIR(st.st_mode)) {
-                flags = dirflags(repo, rp, path);
+                git_status_file(&flags, repo, path.c_str());
+                flags |= dirflags(repo, rp, path);
             } else {
                 git_status_file(&flags, repo, path.c_str());
             }
@@ -568,6 +569,9 @@ void loadconfig()
     settings.symbols.date.year = cpp11_getstring(ini, "symbols:date_year", "year");
 
     #ifdef USE_GIT
+    settings.override_git_repo_color = iniparser_getboolean(ini, "settings:override_git_repo_color", false);
+    settings.override_git_dir_color = iniparser_getboolean(ini, "settings:override_git_dir_color", false);
+
     settings.symbols.git.ignore = cpp11_getstring(ini, "symbols:git_ignore", "!");
     settings.symbols.git.conflict = cpp11_getstring(ini, "symbols:git_conflict", "X");
     settings.symbols.git.modified = cpp11_getstring(ini, "symbols:git_modified", "~");
@@ -618,6 +622,13 @@ void loadconfig()
     settings.color.git.repo_dirty.bg = iniparser_getint(ini, "colors:git_repo_dirty_bg", -1);
     settings.color.git.repo_clean.bg = iniparser_getint(ini, "colors:git_repo_clean_bg", -1);
     settings.color.git.repo_bare.bg = iniparser_getint(ini, "colors:git_repo_bare_bg", -1);
+
+    settings.color.git.o_dir_dirty = cpp11_getstring(ini, "color:git_dir_dirty", "");
+    settings.color.git.o_dir_clean = cpp11_getstring(ini, "color:git_dir_clean", "");
+
+    settings.color.git.o_repo_dirty = cpp11_getstring(ini, "color:git_repo_dirty", "");
+    settings.color.git.o_repo_clean = cpp11_getstring(ini, "color:git_repo_clean", "");
+    settings.color.git.o_repo_bare = cpp11_getstring(ini, "color:git_repo_bare", "");
     #endif
 
     iniparser_freedict(ini);

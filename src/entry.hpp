@@ -72,6 +72,11 @@ struct settings_t {
     bool size_number_color;
     bool date_number_color;
 
+    #ifdef USE_GIT
+    bool override_git_repo_color;
+    bool override_git_dir_color;
+    #endif
+
     bool no_conf;
 
     int forced_columns;
@@ -147,6 +152,13 @@ struct settings_t {
             color_t repo_dirty;
             color_t repo_clean;
             color_t repo_bare;
+
+            std::string o_dir_dirty;
+            std::string o_dir_clean;
+
+            std::string o_repo_dirty;
+            std::string o_repo_clean;
+            std::string o_repo_bare;
         } git;
         #endif
     } color;
@@ -256,7 +268,11 @@ private:
     static char *lsPerms(unsigned int mode);
     static DateFormat timeAgo(int64_t ftime);
     static DateFormat toDateFormat(std::string num, int unit);
-    static std::string colorize(std::string input, color_t color);
+    static std::string colorize(
+        std::string input,
+        color_t color,
+        bool ending = true
+    );
     static unsigned int cleanlen(std::string input);
 
     std::string unitConv(float size);

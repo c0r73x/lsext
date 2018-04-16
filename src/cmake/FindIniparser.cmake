@@ -22,6 +22,7 @@ else (INIPARSER_LIBRARIES AND INIPARSER_INCLUDE_DIRS)
     NAMES
       iniparser.h
     PATHS
+      /usr/include/iniparser4
       /usr/include
       /usr/local/include
       /opt/local/include
@@ -30,6 +31,7 @@ else (INIPARSER_LIBRARIES AND INIPARSER_INCLUDE_DIRS)
 
   find_library(INIPARSER_LIBRARY
     NAMES
+      iniparser4
       iniparser
     PATHS
       /usr/lib
