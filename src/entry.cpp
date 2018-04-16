@@ -184,6 +184,9 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                     } else if (flags & GIT_STATUS_IGNORED) {
                         color = settings.color.git.ignore;
                         symbol = settings.symbols.git.ignore;
+                    } else if (flags & (GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW)) {
+                        color = settings.color.git.untracked;
+                        symbol = settings.symbols.git.untracked;
                     } else {
                         color = settings.color.git.dir_clean;
                         symbol = settings.symbols.git.dir_clean;
