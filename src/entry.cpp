@@ -30,17 +30,19 @@
 
 std::unordered_map<std::string, std::string> colors;
 
-int wildcmp(const char *w, const char *s)
+std::unordered_map<uint8_t, std::string> uid_cache;
+std::unordered_map<uint8_t, std::string> gid_cache;
+
+int wildcmp(const char *w, const char *s, uint8_t wl, uint8_t sl)
 {
-    uint8_t wl = strlen(w) - 1;
-    uint8_t sl = strlen(s) - 1;
     const char *wp = &w[wl];
     const char *sp = &s[sl];
 
     bool star = false;
 
 loopStart:
-    for (; *sp; --sp, --wp) {
+
+    for (; *sp; --sp, --wp, --wl, --sl) {
         switch (*wp) {
             case '*':
                 star = true;
@@ -247,31 +249,47 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         #endif /* S_ISLNK */
 
-        struct passwd pw;
-        struct passwd *pwp;
-
-        struct group gr;
-        struct group *grp;
-
         char buf[PATH_MAX] = {0};
 
-        if (getpwuid_r(st->st_uid, &pw, buf, sizeof(buf), &pwp)) {
-            this->user = colorize("????", settings.color.user.user);
+        auto cuid = uid_cache.find(st->st_uid);
+        auto cgid = gid_cache.find(st->st_gid);
+        std::string user;
+        std::string group;
+
+        if (cuid == uid_cache.end()) {
+            struct passwd pw;
+            struct passwd *pwp;
+
+            if (getpwuid_r(st->st_uid, &pw, buf, sizeof(buf), &pwp)) {
+                user = colorize("????", settings.color.user.user);
+            } else {
+                user = colorize(pw.pw_name, settings.color.user.user);
+            }
+
+            uid_cache[st->st_uid] = user;
         } else {
-            this->user = colorize(pw.pw_name, settings.color.user.user);
+            user = cuid->second;
         }
 
-        this->user += colorize(
-                          settings.symbols.user.separator,
-                          settings.color.user.separator
-                      );
+        if (cgid == gid_cache.end()) {
+            struct group gr;
+            struct group *grp;
 
-        if (getgrgid_r(st->st_gid, &gr, buf, sizeof(buf), &grp)) {
-            this->user += colorize("????", settings.color.user.group);
+            if (getgrgid_r(st->st_gid, &gr, buf, sizeof(buf), &grp)) {
+                group = colorize("????", settings.color.user.group);
+            } else {
+                group = colorize(gr.gr_name, settings.color.user.group);
+            }
+
+            gid_cache[st->st_gid] = group;
         } else {
-            this->user += colorize(gr.gr_name, settings.color.user.group);
+            group += cgid->second;
         }
 
+        this->user = user + colorize(
+                         settings.symbols.user.separator,
+                         settings.color.user.separator
+                     ) + group;
 
         this->date = timeAgo(st->st_ctime);
         this->size = unitConv(st->st_size);
@@ -304,13 +322,15 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         }
     }
 
+    this->file_len = (color + file + suffix + git).length();
+
     if (settings.colors) {
         this->file += "\033[0m";
         this->perms = colorperms(this->perms);
+        this->clean_len = cleanlen(color + file + suffix + git);
+    } else {
+        this->clean_len = this->file_len;
     }
-
-    this->file_len = (color + file + suffix + git).length();
-    this->clean_len = cleanlen(color + file + suffix + git);
 }
 
 std::string Entry::colorperms(std::string input)
@@ -416,16 +436,22 @@ void Entry::print(int max_len)
 std::string Entry::findColor(const char *file)
 {
     auto c = std::find_if(colors.begin(), colors.end(),
-        [file](const std::pair<std::string, std::string> &t) -> bool {
-            return wildcmp(t.first.c_str(), file) > 0;
-        }
-    );
+    [file](const std::pair<std::string, std::string> &t) -> bool {
+        return wildcmp(
+            t.first.c_str(),
+            file,
+            t.first.length() - 1,
+            strlen(file) - 1
+        ) > 0;
+    }
+                         );
 
     if (c != colors.end()) {
         return "\033[" + c->second + "m";
     }
 
     c = colors.find("fi");
+
     if (c != colors.end()) {
         return "\033[" + c->second + "m";
     }
