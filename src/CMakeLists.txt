@@ -4,7 +4,7 @@ project(lsext)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 17)
-add_definitions("-Werror -Wall -pedantic -ggdb")
+add_definitions("-Werror -Wall -pedantic")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
