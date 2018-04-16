@@ -27,7 +27,7 @@
 #include <iniparser.h>
 
 using FileList = std::vector<Entry *>;
-using DirList = std::map<std::string, FileList>;
+using DirList = std::unordered_map<std::string, FileList>;
 
 settings_t settings = {0};
 
