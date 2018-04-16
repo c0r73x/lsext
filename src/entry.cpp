@@ -8,6 +8,7 @@
 #include <ctime>
 #include <climits>
 #include <algorithm>
+#include <unordered_map>
 
 #include <pcrecpp.h>
 
@@ -27,38 +28,53 @@
     #include <git2.h>
 #endif
 
-std::map<std::string, std::string> colors;
+std::unordered_map<std::string, std::string> colors;
 
 int wildcmp(const char *w, const char *s)
 {
-    int lw = strlen(w) + 1;
-    int ls = strlen(s) + 1;
+    uint8_t wl = strlen(w) - 1;
+    uint8_t sl = strlen(s) - 1;
+    const char *wp = &w[wl];
+    const char *sp = &s[sl];
 
-    auto wp = gsl::make_span<const char>(w, w + lw);
-    auto sp = gsl::make_span<const char>(s, s + ls);
+    bool star = false;
 
-    for (int i = 0; i < lw; i++) {
-        switch (wp.at(i)) {
-            case '*': {
-                for (int j = i; j < ls; j++) {
-                    if (wildcmp(&wp.at(i + 1), &sp.at(j)) == 0) {
-                        return 0;
-                    }
+loopStart:
+    for (; *sp; --sp, --wp) {
+        switch (*wp) {
+            case '*':
+                star = true;
+                s = &sp[sl], wp = &w[wl];
+
+                if (!*--w) {
+                    return 1;
                 }
 
-                return -1;
-            }
+                goto loopStart;
 
             default:
-                if (wp.at(i) != sp.at(i)) {
-                    return -1;
+                if (*sp != *wp) {
+                    goto starCheck;
                 }
 
                 break;
         }
     }
 
-    return 0;
+    if (*wp == '*') {
+        --wp;
+    }
+
+    return (!*wp);
+
+starCheck:
+
+    if (!star) {
+        return 0;
+    }
+
+    s--;
+    goto loopStart;
 }
 
 std::string Entry::colorize(std::string input, color_t color)
@@ -357,7 +373,8 @@ std::string Entry::colorperms(std::string input)
     return output;
 }
 
-void Entry::list(int max_user, int max_date, int max_date_unit, int max_size)
+void Entry::list(int max_user, int max_date, int max_date_unit,
+                 int max_size)
 {
     int ulen = cleanlen(user);
     int dlen = cleanlen(date.first);
@@ -399,16 +416,17 @@ void Entry::print(int max_len)
 
 std::string Entry::findColor(const char *file)
 {
-    auto c = std::find_if(colors.begin(), colors.end(), 
-            [file](const std::pair<std::string, std::string> &t) -> bool {
-                return wildcmp(t.first.c_str(), file) == 0;
-            }
-        );
+    auto c = std::find_if(colors.begin(), colors.end(),
+        [file](const std::pair<std::string, std::string> &t) -> bool {
+            return wildcmp(t.first.c_str(), file) > 0;
+        }
+    );
 
-    if (c == colors.end()) {
-        c = colors.find("fi");
+    if (c != colors.end()) {
+        return "\033[" + c->second + "m";
     }
 
+    c = colors.find("fi");
     if (c != colors.end()) {
         return "\033[" + c->second + "m";
     }

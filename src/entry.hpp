@@ -5,7 +5,7 @@
 
 #include <string>
 #include <vector>
-#include <map>
+#include <unordered_map>
 
 #include <sys/types.h>
 
@@ -204,7 +204,7 @@ struct settings_t {
 };
 
 extern settings_t settings;
-extern std::map<std::string, std::string> colors;
+extern std::unordered_map<std::string, std::string> colors;
 
 class Entry
 {
