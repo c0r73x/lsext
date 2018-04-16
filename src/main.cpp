@@ -4,9 +4,10 @@
 
 #include <algorithm>
 #include <map>
-#include <regex>
 #include <sstream>
 #include <vector>
+
+#include <pcrecpp.h>
 
 #include <glob.h>
 #include <dirent.h>
@@ -80,14 +81,9 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
                 return UINT_MAX;
             }
 
-            std::regex root_re("/\\.git$");
-
-            rp = std::regex_replace(
-                     root.ptr,
-                     root_re,
-                     "",
-                     std::regex_constants::format_default
-                 );
+            static pcrecpp::RE re("/\\.git/?$");
+            rp = root.ptr;
+            re.Replace("", &rp);
         } else {
             git_buf_free(&root);
             return UINT_MAX;
@@ -151,14 +147,9 @@ Entry *addfile(const char *path, const char *file)
             return nullptr;
         }
 
-        std::regex root_re("/\\.git/$");
-
-        rp = std::regex_replace(
-                 root.ptr,
-                 root_re,
-                 "",
-                 std::regex_constants::format_default
-             );
+        static pcrecpp::RE re("/\\.git/?$");
+        rp = root.ptr;
+        re.Replace("", &rp);
     }
 
     #endif
