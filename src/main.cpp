@@ -715,7 +715,7 @@ int main(int argc, const char *argv[])
             struct stat st = {0};
 
             if ((lstat(sp.at(i), &st)) < 0) {
-                fprintf(stderr, "Unable to open %s!", sp.at(i));
+                fprintf(stderr, "Unable to open %s!\n", sp.at(i));
             } else {
                 if (S_ISDIR(st.st_mode)) {
                     dirs.insert(DirList::value_type(sp.at(i), listdir(sp.at(i))));
