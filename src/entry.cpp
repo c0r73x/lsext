@@ -110,7 +110,7 @@ std::string Entry::colorize(std::string input, color_t color, bool ending)
 
 unsigned int Entry::cleanlen(std::string input)
 {
-    static pcrecpp::RE re("\033\\[[;0-9]*m");
+    static pcrecpp::RE re("(\033|\x1b)\\[[;:0-9]*m");
     std::string tmp = input;
 
     if (re.GlobalReplace("", &tmp)) {
@@ -174,6 +174,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
                     if (settings.override_git_repo_color) {
                         this->color = colorize(symbol, color, false);
+                        this->git = "";
                     } else {
                         this->git = colorize(symbol, color);
                     }
@@ -194,6 +195,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
                     if (settings.override_git_dir_color) {
                         this->color = colorize(symbol, color, false);
+                        this->git = "";
                     } else {
                         this->git = colorize(symbol, color);
                     }
