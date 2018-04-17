@@ -110,14 +110,18 @@ std::string Entry::colorize(std::string input, color_t color, bool ending)
 
 unsigned int Entry::cleanlen(std::string input)
 {
-    static pcrecpp::RE re("(\033|\x1b)\\[[;:0-9]*m");
+    static pcrecpp::RE esc_re("\033\\[?[;:0-9]*m");
+    static pcrecpp::RE uni_re("[\u0080-\uffff]+");
     std::string tmp = input;
 
-    if (re.GlobalReplace("", &tmp)) {
+    if (esc_re.GlobalReplace("", &tmp)) {
+        uni_re.GlobalReplace(" ", &tmp);
+
         return tmp.length();
     }
 
-    return input.length();
+    uni_re.GlobalReplace(" ", &tmp);
+    return tmp.length();
 }
 
 Entry::Entry(std::string directory, const char *file, char *fullpath,
@@ -125,6 +129,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 {
     this->islink = false;
     this->color = "";
+    this->git = ' ';
 
     if (st == nullptr) {
         this->user = '?';
@@ -138,7 +143,6 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         this->size_len = 1;
         this->suffix = ' ';
         this->prefix = ' ';
-        this->git = ' ';
         this->isdir = false;
         this->modified = 0;
         this->bsize = 0;
@@ -174,7 +178,6 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
                     if (settings.override_git_repo_color) {
                         this->color = colorize(symbol, color, false);
-                        this->git = "";
                     } else {
                         this->git = colorize(symbol, color);
                     }
@@ -195,7 +198,6 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
                     if (settings.override_git_dir_color) {
                         this->color = colorize(symbol, color, false);
-                        this->git = "";
                     } else {
                         this->git = colorize(symbol, color);
                     }
@@ -232,8 +234,6 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
                 this->git = colorize(symbol, color);
             }
-        } else {
-            this->git = ' ';
         }
 
         #endif
@@ -345,12 +345,18 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         }
     }
 
-    this->file_len = (color + file + suffix + git).length();
+    this->file_len = (git + color + file + suffix).length();
 
     if (settings.colors) {
         this->file += "\033[0m";
         this->perms = colorperms(this->perms);
-        this->clean_len = cleanlen(color + file + suffix + git);
+
+        this->clean_len = cleanlen(
+                this->git +
+                this->color +
+                this->file +
+                this->suffix
+            );
     } else {
         this->clean_len = this->file_len;
     }
@@ -459,17 +465,17 @@ void Entry::print(int max_len)
 std::string Entry::findColor(const char *file)
 {
     auto c = std::find_if(colors.begin(), colors.end(),
-    [file](const std::pair<std::string, std::string> &t) -> bool {
-        return wildcmp(
-            t.first.c_str(),
-            file,
-            t.first.length() - 1,
-            strlen(file) - 1
-        ) > 0;
-    }
-                         );
+        [file](const std::pair<std::string, std::string> &t) -> bool {
+            return wildcmp(
+                t.first.c_str(),
+                file,
+                t.first.length() - 1,
+                strlen(file) - 1
+            ) > 0;
+        }
+    );
 
-    if (c != colors.end()) {
+    if (c != colors.end() && c->second != "target") {
         return "\033[" + c->second + "m";
     }
 
