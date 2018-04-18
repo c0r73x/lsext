@@ -1,13 +1,13 @@
 #include "entry.hpp"
 
+#include <algorithm>
 #include <cerrno>
+#include <climits>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#include <climits>
-#include <algorithm>
 #include <unordered_map>
 
 #include <pcrecpp.h>
@@ -33,23 +33,23 @@ std::unordered_map<std::string, std::string> colors;
 std::unordered_map<uint8_t, std::string> uid_cache;
 std::unordered_map<uint8_t, std::string> gid_cache;
 
-int wildcmp(const char *w, const char *s, uint8_t wl, uint8_t sl)
+bool wildcmp(const char *w, const char *s, uint8_t wl, uint8_t sl)
 {
-    const char *wp = &w[wl];
-    const char *sp = &s[sl];
+    const char *wp = &w[wl]; // NOLINT
+    const char *sp = &s[sl]; // NOLINT
 
     bool star = false;
 
 loopStart:
 
-    for (; *sp; --sp, --wp, --wl, --sl) {
+    for (; *sp; --sp, --wp, --wl, --sl) { // NOLINT
         switch (*wp) {
             case '*':
                 star = true;
-                s = &sp[sl], wp = &w[wl];
+                s = &sp[sl], wp = &w[wl]; // NOLINT
 
-                if (!*--w) {
-                    return 1;
+                if (*--w == 0) { // NOLINT
+                    return true;
                 }
 
                 goto loopStart;
@@ -64,18 +64,18 @@ loopStart:
     }
 
     if (*wp == '*') {
-        --wp;
+        --wp; // NOLINT
     }
 
-    return (!*wp);
+    return (*wp == 0);
 
 starCheck:
 
     if (!star) {
-        return 0;
+        return false;
     }
 
-    s--;
+    s--; // NOLINT
     goto loopStart;
 }
 
@@ -108,24 +108,23 @@ std::string Entry::colorize(std::string input, color_t color, bool ending)
     return input;
 }
 
-unsigned int Entry::cleanlen(std::string input)
+uint32_t Entry::cleanlen(std::string input)
 {
     static pcrecpp::RE esc_re("\033\\[?[;:0-9]*m");
     static pcrecpp::RE uni_re("[\u0080-\uffff]+");
-    std::string tmp = input;
 
-    if (esc_re.GlobalReplace("", &tmp)) {
-        uni_re.GlobalReplace(" ", &tmp);
+    if (esc_re.GlobalReplace("", &input) != 0) {
+        uni_re.GlobalReplace(" ", &input);
 
-        return tmp.length();
+        return input.length();
     }
 
-    uni_re.GlobalReplace(" ", &tmp);
-    return tmp.length();
+    uni_re.GlobalReplace(" ", &input);
+    return input.length();
 }
 
-Entry::Entry(std::string directory, const char *file, char *fullpath,
-             struct stat *st, unsigned int flags)
+Entry::Entry(const char *file, char *fullpath, struct stat *st,
+             uint32_t flags)
 {
     this->islink = false;
     this->color = "";
@@ -161,14 +160,14 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         if (flags != UINT_MAX) {
             std::string symbol;
-            color_t color;
+            color_t color = {0};
 
-            if (S_ISDIR(st->st_mode)) {
-                if (flags & GIT_ISREPO) {
-                    if (flags & GIT_DIR_DIRTY) {
+            if (S_ISDIR(st->st_mode)) { // NOLINT
+                if ((flags & GIT_ISREPO) != 0) {
+                    if ((flags & GIT_DIR_DIRTY) != 0) {
                         color = settings.color.git.repo_dirty;
                         symbol = settings.symbols.git.repo_dirty;
-                    } else if (flags & GIT_DIR_BARE) {
+                    } else if ((flags & GIT_DIR_BARE) != 0) {
                         color = settings.color.git.repo_bare;
                         symbol = settings.symbols.git.repo_bare;
                     } else {
@@ -179,16 +178,18 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                     if (settings.override_git_repo_color) {
                         this->color = colorize(symbol, color, false);
                     } else {
-                        this->git = colorize(symbol, color);
+                        this->git = colorize(symbol, color, true);
                     }
                 } else {
-                    if (flags & GIT_DIR_DIRTY) {
+                    if ((flags & GIT_DIR_DIRTY) != 0) {
                         color = settings.color.git.dir_dirty;
                         symbol = settings.symbols.git.dir_dirty;
-                    } else if (flags & GIT_STATUS_IGNORED) {
+                    } else if ((flags & GIT_STATUS_IGNORED) != 0) {
                         color = settings.color.git.ignore;
                         symbol = settings.symbols.git.ignore;
-                    } else if (flags & (GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW)) {
+                    } else if ((flags & ( // NOLINT
+                        GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW
+                    )) != 0) {
                         color = settings.color.git.untracked;
                         symbol = settings.symbols.git.untracked;
                     } else {
@@ -199,32 +200,34 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                     if (settings.override_git_dir_color) {
                         this->color = colorize(symbol, color, false);
                     } else {
-                        this->git = colorize(symbol, color);
+                        this->git = colorize(symbol, color, true);
                     }
                 }
             } else {
-                if (flags & GIT_STATUS_IGNORED) {
+                if ((flags & GIT_STATUS_IGNORED) != 0) {
                     color = settings.color.git.ignore;
                     symbol = settings.symbols.git.ignore;
-                } else if (flags & GIT_STATUS_CONFLICTED) {
+                } else if ((flags & GIT_STATUS_CONFLICTED) != 0) {
                     color = settings.color.git.conflict;
                     symbol = settings.symbols.git.conflict;
-                } else if (flags & GIT_STATUS_WT_MODIFIED) {
+                } else if ((flags & GIT_STATUS_WT_MODIFIED) != 0) {
                     color = settings.color.git.modified;
                     symbol = settings.symbols.git.modified;
-                } else if (flags & GIT_STATUS_WT_RENAMED) {
+                } else if ((flags & GIT_STATUS_WT_RENAMED) != 0) {
                     color = settings.color.git.renamed;
                     symbol = settings.symbols.git.renamed;
-                } else if (flags & GIT_STATUS_INDEX_NEW) {
+                } else if ((flags & GIT_STATUS_INDEX_NEW) != 0) {
                     color = settings.color.git.added;
                     symbol = settings.symbols.git.added;
-                } else if (flags & GIT_STATUS_WT_TYPECHANGE) {
+                } else if ((flags & GIT_STATUS_WT_TYPECHANGE) != 0) {
                     color = settings.color.git.typechange;
                     symbol = settings.symbols.git.typechange;
-                } else if (flags & GIT_STATUS_WT_UNREADABLE) {
+                } else if ((flags & GIT_STATUS_WT_UNREADABLE) != 0) {
                     color = settings.color.git.unreadable;
                     symbol = settings.symbols.git.unreadable;
-                } else if (flags & (GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW)) {
+                } else if ((flags & ( // NOLINT
+                    GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW
+                )) != 0) {
                     color = settings.color.git.untracked;
                     symbol = settings.symbols.git.untracked;
                 } else {
@@ -232,7 +235,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                     symbol = settings.symbols.git.unchanged;
                 }
 
-                this->git = colorize(symbol, color);
+                this->git = colorize(symbol, color, true);
             }
         }
 
@@ -242,7 +245,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         #ifdef S_ISLNK
 
-        if (S_ISLNK(st->st_mode) && !settings.resolve_links) {
+        if (S_ISLNK(st->st_mode) && !settings.resolve_links) { // NOLINT
             char target[PATH_MAX] = {0};
 
             if ((readlink(fullpath, &target[0], sizeof(target))) >= 0) {
@@ -253,15 +256,16 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
                 this->islink = true;
 
                 this->target = &target[0];
-                std::string path = &target[0];
+                std::string fpath = &target[0]; // NOLINT
 
                 if (target[0] != '/') {
-                    path = std::string(dirname(fullpath)) + "/" + this->target;
+                    // NOLINTNEXTLINE
+                    fpath = std::string(dirname(fullpath)) + "/" + this->target;
                 }
 
                 struct stat tst = {0};
 
-                if ((lstat(path.c_str(), &tst)) < 0) {
+                if ((lstat(fpath.c_str(), &tst)) < 0) {
                     this->target_color = this->color;
                 } else {
                     this->color = getColor(file, tst.st_mode);
@@ -280,13 +284,15 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         std::string group;
 
         if (cuid == uid_cache.end()) {
-            struct passwd pw;
+            struct passwd pw = { nullptr };
             struct passwd *pwp;
 
-            if (getpwuid_r(st->st_uid, &pw, buf, sizeof(buf), &pwp)) {
-                user = colorize("????", settings.color.user.user);
+            if (getpwuid_r(st->st_uid, &pw, &buf[0], sizeof(buf), &pwp) != 0) {
+                // NOLINTNEXTLINE
+                user = colorize("????", settings.color.user.user, true);
             } else {
-                user = colorize(pw.pw_name, settings.color.user.user);
+                // NOLINTNEXTLINE
+                user = colorize(pw.pw_name, settings.color.user.user, true);
             }
 
             uid_cache[st->st_uid] = user;
@@ -295,13 +301,15 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         }
 
         if (cgid == gid_cache.end()) {
-            struct group gr;
+            struct group gr = { nullptr };
             struct group *grp;
 
-            if (getgrgid_r(st->st_gid, &gr, buf, sizeof(buf), &grp)) {
-                group = colorize("????", settings.color.user.group);
+            if (getgrgid_r(st->st_gid, &gr, &buf[0], sizeof(buf), &grp) != 0) {
+                // NOLINTNEXTLINE
+                group = colorize("????", settings.color.user.group, true);
             } else {
-                group = colorize(gr.gr_name, settings.color.user.group);
+                // NOLINTNEXTLINE
+                group = colorize(gr.gr_name, settings.color.user.group, true);
             }
 
             gid_cache[st->st_gid] = group;
@@ -311,7 +319,8 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 
         this->user = user + colorize(
                          settings.symbols.user.separator,
-                         settings.color.user.separator
+                         settings.color.user.separator,
+                         true
                      ) + group;
 
         this->date = timeAgo(st->st_ctime);
@@ -331,16 +340,18 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         this->prefix = (fileHasAcl(fullpath, st) > 0) ? '+' : ' ';
         this->isdir = false;
 
-        if (S_ISDIR(st->st_mode)) {
+        if (S_ISDIR(st->st_mode)) { // NOLINT
             this->suffix = colorize(
                                settings.symbols.suffix.dir,
-                               settings.color.suffix.dir
+                               settings.color.suffix.dir,
+                               true
                            );
             this->isdir = true;
-        } else if ((st->st_mode & S_IEXEC) != 0 && !islink) {
+        } else if ((st->st_mode & S_IEXEC) != 0 && !islink) { // NOLINT
             this->suffix = colorize(
                                settings.symbols.suffix.exec,
-                               settings.color.suffix.exec
+                               settings.color.suffix.exec,
+                               true
                            );
         }
     }
@@ -352,11 +363,11 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
         this->perms = colorperms(this->perms);
 
         this->clean_len = cleanlen(
-                this->git +
-                this->color +
-                this->file +
-                this->suffix
-            );
+                              this->git +
+                              this->color +
+                              this->file +
+                              this->suffix
+                          );
     } else {
         this->clean_len = this->file_len;
     }
@@ -365,7 +376,7 @@ Entry::Entry(std::string directory, const char *file, char *fullpath,
 std::string Entry::colorperms(std::string input)
 {
     std::string output;
-    color_t color;
+    color_t color = {0};
 
     for (auto c : input) {
         switch (c) {
@@ -415,7 +426,7 @@ std::string Entry::colorperms(std::string input)
                 break;
         }
 
-        output += colorize(std::string(&c, 1), color);
+        output += colorize(std::string(&c, 1), color, true); // NOLINT
     }
 
     return output;
@@ -429,17 +440,18 @@ void Entry::list(int max_user, int max_date, int max_date_unit,
     int dulen = cleanlen(date.second);
     int slen = cleanlen(size);
 
+    // NOLINTNEXTLINE
     printf(
         " %s%s    %s%s   %s%s %s%s  %s%s  %s%s%s%s%s%s\033[0m\n",
         perms.c_str(),
         prefix.c_str(),
         user.c_str(),
-        std::string(max_user - ulen, ' ').c_str(),
+        std::string(max_user - ulen, ' ').c_str(), // NOLINT
         date.first.c_str(),
-        std::string(max_date - dlen, ' ').c_str(),
+        std::string(max_date - dlen, ' ').c_str(), // NOLINT
         date.second.c_str(),
-        std::string(max_date_unit - dulen, ' ').c_str(),
-        std::string(max_size - slen, ' ').c_str(),
+        std::string(max_date_unit - dulen, ' ').c_str(), // NOLINT
+        std::string(max_size - slen, ' ').c_str(), // NOLINT
         size.c_str(),
         #ifdef USE_GIT
         git.c_str()
@@ -459,6 +471,8 @@ void Entry::print(int max_len)
 {
     std::string combined = git + color + file + suffix;
     int len = cleanlen(combined);
+
+    // NOLINTNEXTLINE
     printf("%s", (combined + std::string(max_len - len, ' ')).c_str());
 }
 
@@ -471,7 +485,7 @@ std::string Entry::findColor(const char *file)
                 file,
                 t.first.length() - 1,
                 strlen(file) - 1
-            ) > 0;
+            );
         }
     );
 
@@ -479,44 +493,44 @@ std::string Entry::findColor(const char *file)
         return "\033[" + c->second + "m";
     }
 
-    c = colors.find("fi");
+    c = colors.find("fi"); // NOLINT
 
     if (c != colors.end()) {
         return "\033[" + c->second + "m";
     }
 
-    return "\033[0m";
+    return "\033[0m"; // NOLINT
 }
 
-std::string Entry::getColor(const char *file, unsigned int mode)
+std::string Entry::getColor(const char *file, uint32_t mode)
 {
-    if ((mode & S_ISUID) != 0) {
+    if ((mode & S_ISUID) != 0) { // NOLINT
         return findColor(SLK_SUID);
     }
 
-    if ((mode & S_ISGID) != 0) {
+    if ((mode & S_ISGID) != 0) { // NOLINT
         return findColor(SLK_SGID);
     }
 
-    if ((mode & S_ISVTX) != 0) {
-        return findColor((mode & S_IWOTH) ? SLK_OWT : SLK_STICKY);
+    if ((mode & S_ISVTX) != 0) { // NOLINT
+        return findColor((mode & S_IWOTH) ? SLK_OWT : SLK_STICKY); // NOLINT
     }
 
-    if (S_ISDIR(mode)) {
-        return findColor((mode & S_IWOTH) ? SLK_OWR : SLK_DIR);
+    if (S_ISDIR(mode)) { // NOLINT
+        return findColor((mode & S_IWOTH) ? SLK_OWR : SLK_DIR); // NOLINT
     }
 
-    if (S_ISBLK(mode)) {
+    if (S_ISBLK(mode)) { // NOLINT
         return findColor(SLK_BLK);
     }
 
-    if (S_ISCHR(mode)) {
+    if (S_ISCHR(mode)) { // NOLINT
         return findColor(SLK_CHR);
     }
 
     #ifdef S_ISFIFO
 
-    if (S_ISFIFO(mode)) {
+    if (S_ISFIFO(mode)) { // NOLINT
         return findColor(SLK_FIFO);
     }
 
@@ -524,7 +538,7 @@ std::string Entry::getColor(const char *file, unsigned int mode)
 
     #ifdef S_ISLNK
 
-    if (S_ISLNK(mode)) {
+    if (S_ISLNK(mode)) { // NOLINT
         return findColor(SLK_LNK);
     }
 
@@ -532,7 +546,7 @@ std::string Entry::getColor(const char *file, unsigned int mode)
 
     #ifdef S_ISSOCK
 
-    if (S_ISSOCK(mode)) {
+    if (S_ISSOCK(mode)) { // NOLINT
         return findColor(SLK_SOCK);
     }
 
@@ -540,7 +554,7 @@ std::string Entry::getColor(const char *file, unsigned int mode)
 
     #ifdef S_ISDOOR /* Solaris 2.6, etc. */
 
-    if (S_ISDOOR(mode)) {
+    if (S_ISDOOR(mode)) { // NOLINT
         return findColor(SLK_DOOR);
     }
 
@@ -549,27 +563,27 @@ std::string Entry::getColor(const char *file, unsigned int mode)
     return findColor(file);
 }
 
-char Entry::fileTypeLetter(unsigned int mode)
+char Entry::fileTypeLetter(uint32_t mode)
 {
-    if (S_ISREG(mode)) {
+    if (S_ISREG(mode)) { // NOLINT
         return '-';
     }
 
-    if (S_ISDIR(mode)) {
+    if (S_ISDIR(mode)) { // NOLINT
         return 'd';
     }
 
-    if (S_ISBLK(mode)) {
+    if (S_ISBLK(mode)) { // NOLINT
         return 'b';
     }
 
-    if (S_ISCHR(mode)) {
+    if (S_ISCHR(mode)) { // NOLINT
         return 'c';
     }
 
     #ifdef S_ISFIFO
 
-    if (S_ISFIFO(mode)) {
+    if (S_ISFIFO(mode)) { // NOLINT
         return 'p';
     }
 
@@ -577,7 +591,7 @@ char Entry::fileTypeLetter(unsigned int mode)
 
     #ifdef S_ISLNK
 
-    if (S_ISLNK(mode)) {
+    if (S_ISLNK(mode)) { // NOLINT
         return 'l';
     }
 
@@ -585,7 +599,7 @@ char Entry::fileTypeLetter(unsigned int mode)
 
     #ifdef S_ISSOCK
 
-    if (S_ISSOCK(mode)) {
+    if (S_ISSOCK(mode)) { // NOLINT
         return 's';
     }
 
@@ -593,7 +607,7 @@ char Entry::fileTypeLetter(unsigned int mode)
 
     #ifdef S_ISDOOR /* Solaris 2.6, etc. */
 
-    if (S_ISDOOR(mode)) {
+    if (S_ISDOOR(mode)) { // NOLINT
         return 'D';
     }
 
@@ -608,7 +622,7 @@ int Entry::fileHasAcl(char const *name, struct stat const *sb)
 
     #ifdef S_ISLNK
 
-    if (S_ISLNK(sb->st_mode)) {
+    if (S_ISLNK(sb->st_mode)) { // NOLINT
         return 0;
     }
 
@@ -622,7 +636,7 @@ int Entry::fileHasAcl(char const *name, struct stat const *sb)
         return 1;
     }
 
-    if (ret == 0 && S_ISDIR(sb->st_mode)) {
+    if (ret == 0 && S_ISDIR(sb->st_mode)) { // NOLINT
         ret = getxattr(name, XATTR_NAME_POSIX_ACL_DEFAULT, nullptr, 0);
 
         if (ret < 0 && errno == ENODATA) {
@@ -635,7 +649,7 @@ int Entry::fileHasAcl(char const *name, struct stat const *sb)
     return ret;
 }
 
-char *Entry::lsPerms(unsigned int mode)
+char *Entry::lsPerms(uint32_t mode)
 {
     static const char *rwx[] = {
         "---",
@@ -652,20 +666,20 @@ char *Entry::lsPerms(unsigned int mode)
 
     bits[0] = static_cast<char>(fileTypeLetter(mode));
 
-    strncpy(&bits[1], gsl::at(rwx, (mode >> 6) & 7), 3);
-    strncpy(&bits[4], gsl::at(rwx, (mode >> 3) & 7), 3);
-    strncpy(&bits[7], gsl::at(rwx, (mode & 7)), 3);
+    strncpy(&bits[1], gsl::at(rwx, (mode >> 6) & 7), 3); // NOLINT
+    strncpy(&bits[4], gsl::at(rwx, (mode >> 3) & 7), 3); // NOLINT
+    strncpy(&bits[7], gsl::at(rwx, (mode & 7)), 3); // NOLINT
 
-    if ((mode & S_ISUID) != 0) {
-        bits[3] = (mode & S_IXUSR) != 0 ? 's' : 'S';
+    if ((mode & S_ISUID) != 0) { // NOLINT
+        bits[3] = (mode & S_IXUSR) != 0 ? 's' : 'S'; // NOLINT
     }
 
-    if ((mode & S_ISGID) != 0) {
-        bits[6] = (mode & S_IXGRP) != 0 ? 's' : 'l';
+    if ((mode & S_ISGID) != 0) { // NOLINT
+        bits[6] = (mode & S_IXGRP) != 0 ? 's' : 'l'; // NOLINT
     }
 
-    if ((mode & S_ISVTX) != 0) {
-        bits[9] = (mode & S_IXOTH) != 0 ? 't' : 'T';
+    if ((mode & S_ISVTX) != 0) { // NOLINT
+        bits[9] = (mode & S_IXOTH) != 0 ? 't' : 'T'; // NOLINT
     }
 
     bits[10] = '\0';
@@ -695,11 +709,11 @@ std::string Entry::unitConv(float size)
 
     char csize[PATH_MAX] = {0};
 
-    for (unsigned int i = 0; i < sizeof(units); i++) {
+    for (uint32_t i = 0; i < sizeof(units); i++) {
         if ((size / 1024) <= 1.f) {
 
-            color_t c_symbol;
-            color_t c_unit;
+            color_t c_symbol = {0};
+            color_t c_unit = {0};
 
             if (!settings.size_number_color) {
                 c_unit = gsl::at(colors, i);
@@ -710,13 +724,15 @@ std::string Entry::unitConv(float size)
             }
 
             if (static_cast<int>(size * 10) % 10 == 0) {
+                // NOLINTNEXTLINE
                 snprintf(&csize[0], sizeof(csize), "%d", static_cast<int>(size));
             } else {
+                // NOLINTNEXTLINE
                 snprintf(&csize[0], sizeof(csize), "%.1f", size);
             }
 
-            unit = colorize(csize, c_unit) +
-                   colorize(gsl::at(units, i), c_symbol);
+            unit = colorize(&csize[0], c_unit, true) + // NOLINT
+                   colorize(gsl::at(units, i), c_symbol, true); // NOLINT
 
             return unit;
         }
@@ -724,14 +740,14 @@ std::string Entry::unitConv(float size)
         size /= 1024;
     }
 
-    snprintf(&csize[0], strlen(csize), "%.2g?", size);
-    return csize;
+    snprintf(&csize[0], strlen(&csize[0]), "%.2g?", size); // NOLINT
+    return &csize[0]; // NOLINT
 }
 
-DateFormat Entry::toDateFormat(std::string num, int unit)
+DateFormat Entry::toDateFormat(const std::string &num, int unit)
 {
-    color_t c_symbol;
-    color_t c_unit;
+    color_t c_symbol = {0};
+    color_t c_unit = {0};
 
     static const char *units[] = {
         settings.symbols.date.sec.c_str(),
@@ -760,8 +776,8 @@ DateFormat Entry::toDateFormat(std::string num, int unit)
     }
 
     return DateFormat(
-               colorize(num, c_unit),
-               colorize(gsl::at(units, unit), c_symbol)
+               colorize(num, c_unit, true),
+               colorize(gsl::at(units, unit), c_symbol, true) // NOLINT
            );
 }
 
@@ -774,7 +790,7 @@ DateFormat Entry::timeAgo(int64_t ftime)
     int64_t rel = delta;
 
     if (delta < 10) {
-        return toDateFormat("<", DATE_SEC);
+        return toDateFormat("<", DATE_SEC); // NOLINT
     }
 
     if (delta < 60) {
@@ -784,7 +800,7 @@ DateFormat Entry::timeAgo(int64_t ftime)
     rel /= 60;
 
     if (delta < 120) {
-        return toDateFormat("<", DATE_MIN);
+        return toDateFormat("<", DATE_MIN); // NOLINT
     }
 
     if (delta < 2700) {
@@ -794,7 +810,7 @@ DateFormat Entry::timeAgo(int64_t ftime)
     rel /= 60;
 
     if (delta < 5400) {
-        return toDateFormat("<", DATE_HOUR);
+        return toDateFormat("<", DATE_HOUR); // NOLINT
     }
 
     if (delta < 129600) {
@@ -804,7 +820,7 @@ DateFormat Entry::timeAgo(int64_t ftime)
     rel /= 24;
 
     if (delta < 172800) {
-        return toDateFormat("<", DATE_DAY);
+        return toDateFormat("<", DATE_DAY); // NOLINT
     }
 
     if (delta < 2592000) {
@@ -814,7 +830,7 @@ DateFormat Entry::timeAgo(int64_t ftime)
     rel /= 30;
 
     if (delta < 5184000) {
-        return toDateFormat("<", DATE_MON);
+        return toDateFormat("<", DATE_MON); // NOLINT
     }
 
     if (delta < 31104000) {

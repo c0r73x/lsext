@@ -1,11 +1,12 @@
+// NOLINTNEXTLINE
 #ifndef ENTRY_HPP_
 #define ENTRY_HPP_
 
 #define USE_GIT 1
 
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include <sys/types.h>
 
@@ -34,10 +35,10 @@
 #define SLK_MULTIHARDLINK "mh"
 #define SLK_CLRTOEOL "cl"
 
-#define GIT_DIR_CLEAN 0x00000000
-#define GIT_DIR_DIRTY 0x00000001
-#define GIT_DIR_BARE  0x00000010
-#define GIT_ISREPO    0x10000000
+#define GIT_DIR_CLEAN 0x00000000u
+#define GIT_DIR_DIRTY 0x00000001u
+#define GIT_DIR_BARE  0x00000010u
+#define GIT_ISREPO    0x10000000u
 
 using DateFormat = std::pair<std::string, std::string>;
 
@@ -61,7 +62,7 @@ struct color_t {
     int bg;
 };
 
-struct settings_t {
+struct settings_t { // NOLINT
     bool resolve_links;
     bool resolve_repos;
     bool show_hidden;
@@ -83,7 +84,7 @@ struct settings_t {
 
     sort_t sort;
 
-    struct colors_t {
+    struct colors_t { // NOLINT
         struct suffix_t {
             color_t exec;
             color_t dir;
@@ -222,15 +223,18 @@ class Entry
 {
 public:
     Entry(
-        std::string directory,
         const char *file,
         char *fullpath,
         struct stat *st,
-        unsigned int flags = 0
+        uint32_t flags
     );
 
     Entry(const Entry &) = default;
     virtual ~Entry() = default;
+
+    Entry(Entry&& other) = delete;
+    Entry& operator=(const Entry& other) = delete;
+    Entry& operator=(Entry&& other) = delete;
 
     std::string file;
 
@@ -264,20 +268,16 @@ private:
     std::string target;
     std::string target_color;
 
-    static char fileTypeLetter(unsigned int mode);
-    static char *lsPerms(unsigned int mode);
+    static char fileTypeLetter(uint32_t mode);
+    static char *lsPerms(uint32_t mode);
     static DateFormat timeAgo(int64_t ftime);
-    static DateFormat toDateFormat(std::string num, int unit);
-    static std::string colorize(
-        std::string input,
-        color_t color,
-        bool ending = true
-    );
-    static unsigned int cleanlen(std::string input);
+    static DateFormat toDateFormat(const std::string &num, int unit);
+    static std::string colorize(std::string input, color_t color, bool ending);
+    static uint32_t cleanlen(std::string input);
 
     std::string unitConv(float size);
     std::string findColor(const char *file);
-    std::string getColor(const char *file, unsigned int mode);
+    std::string getColor(const char *file, uint32_t mode);
     std::string colorperms(std::string input);
 
     int fileHasAcl(char const *name, struct stat const *sb);
