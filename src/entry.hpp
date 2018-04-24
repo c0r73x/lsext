@@ -73,6 +73,8 @@ struct settings_t { // NOLINT
     bool size_number_color;
     bool date_number_color;
 
+    std::string format;
+
     #ifdef USE_GIT
     bool override_git_repo_color;
     bool override_git_dir_color;
@@ -232,9 +234,9 @@ public:
     Entry(const Entry &) = default;
     virtual ~Entry() = default;
 
-    Entry(Entry&& other) = delete;
-    Entry& operator=(const Entry& other) = delete;
-    Entry& operator=(Entry&& other) = delete;
+    Entry(Entry &&other) = delete;
+    Entry &operator=(const Entry &other) = delete;
+    Entry &operator=(Entry &&other) = delete;
 
     std::string file;
 
@@ -253,7 +255,8 @@ public:
     size_t file_len;
     size_t clean_len;
 
-    void list(int max_user, int max_date, int max_date_unit, int max_size);
+    void list(int max_user, int max_date, int max_date_unit, int max_size,
+              int max_flen);
     void print(int max_len);
 
     std::string suffix;
@@ -274,6 +277,8 @@ private:
     static DateFormat toDateFormat(const std::string &num, int unit);
     static std::string colorize(std::string input, color_t color, bool ending);
     static uint32_t cleanlen(std::string input);
+    std::string print_format(const char c, int max_user, int max_date,
+                             int max_date_unit, int max_size, int max_flen);
 
     std::string unitConv(float size);
     std::string findColor(const char *file);

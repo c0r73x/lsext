@@ -188,8 +188,8 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
                         color = settings.color.git.ignore;
                         symbol = settings.symbols.git.ignore;
                     } else if ((flags & ( // NOLINT
-                        GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW
-                    )) != 0) {
+                                    GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW
+                                )) != 0) {
                         color = settings.color.git.untracked;
                         symbol = settings.symbols.git.untracked;
                     } else {
@@ -226,8 +226,8 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
                     color = settings.color.git.unreadable;
                     symbol = settings.symbols.git.unreadable;
                 } else if ((flags & ( // NOLINT
-                    GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW
-                )) != 0) {
+                                GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW
+                            )) != 0) {
                     color = settings.color.git.untracked;
                     symbol = settings.symbols.git.untracked;
                 } else {
@@ -432,62 +432,88 @@ std::string Entry::colorperms(std::string input)
     return output;
 }
 
-void Entry::list(int max_user, int max_date, int max_date_unit,
-                 int max_size)
+std::string Entry::print_format(const char c, int max_user, int max_date,
+                                int max_date_unit, int max_size, int max_flen)
 {
-    int ulen = cleanlen(user);
-    int dlen = cleanlen(date.first);
-    int dulen = cleanlen(date.second);
-    int slen = cleanlen(size);
+    switch (c) {
+        case 'p':
+            return perms + prefix;
+        case 'u': {
+            return user + std::string(max_user - user_len, ' ');
+        }
+        case 'd': {
+            return date.first + std::string(max_date - date_len, ' ') +
+                " " + date.second + std::string(max_date_unit - date_unit_len, ' ');
+        }
+        case 's': {
+            return std::string(max_size - size_len, ' ') + size;
+        }
+        case 'f': {
+            return
+                #ifdef USE_GIT
+                    git +
+                #else
+                    "" +
+                #endif
+                color + file + suffix + target_color + target +
+                std::string(max_flen - clean_len, ' ');
+        }
+    }
+
+    return std::string(1, c);
+}
+
+void Entry::list(int max_user, int max_date, int max_date_unit,
+                 int max_size, int max_flen)
+{
+
+    std::string output;
 
     // NOLINTNEXTLINE
-    printf(
-        " %s%s    %s%s   %s%s %s%s  %s%s  %s%s%s%s%s%s\033[0m\n",
-        perms.c_str(),
-        prefix.c_str(),
-        user.c_str(),
-        std::string(max_user - ulen, ' ').c_str(), // NOLINT
-        date.first.c_str(),
-        std::string(max_date - dlen, ' ').c_str(), // NOLINT
-        date.second.c_str(),
-        std::string(max_date_unit - dulen, ' ').c_str(), // NOLINT
-        std::string(max_size - slen, ' ').c_str(), // NOLINT
-        size.c_str(),
-        #ifdef USE_GIT
-        git.c_str()
-        #else
-        ""
-        #endif
-        ,
-        color.c_str(),
-        file.c_str(),
-        suffix.c_str(),
-        target_color.c_str(),
-        target.c_str()
-    );
+    for (auto c = settings.format.begin(); c != settings.format.end(); c++) {
+        switch (*c) {
+            case '@':
+                c++;
+                output += print_format(
+                              *c,
+                              max_user,
+                              max_date,
+                              max_date_unit,
+                              max_size,
+                              max_flen
+                          );
+                break;
+
+            default:
+                output += *c;
+        }
+    }
+
+    printf("%s\033[0m\n", output.c_str()); // NOLINT
 }
 
 void Entry::print(int max_len)
 {
-    std::string combined = git + color + file + suffix;
-    int len = cleanlen(combined);
 
     // NOLINTNEXTLINE
-    printf("%s", (combined + std::string(max_len - len, ' ')).c_str());
+    printf(
+        "%s",
+        (git + color + file + suffix + std::string(max_len - clean_len, ' ')).c_str()
+    );
 }
 
 std::string Entry::findColor(const char *file)
 {
     auto c = std::find_if(colors.begin(), colors.end(),
-        [file](const std::pair<std::string, std::string> &t) -> bool {
-            return wildcmp(
-                t.first.c_str(),
-                file,
-                t.first.length() - 1,
-                strlen(file) - 1
-            );
-        }
-    );
+    [file](const std::pair<std::string, std::string> &t) -> bool {
+        return wildcmp(
+            t.first.c_str(),
+            file,
+            t.first.length() - 1,
+            strlen(file) - 1
+        );
+    }
+                         );
 
     if (c != colors.end() && c->second != "target") {
         return "\033[" + c->second + "m";

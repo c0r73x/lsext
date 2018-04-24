@@ -342,16 +342,18 @@ void printdir(FileList *lst)
         size_t max_date = 0;
         size_t max_date_unit = 0;
         size_t max_size = 0;
+        size_t max_len = 0;
 
         for (const auto l : *lst) {
             max_user = std::max(l->user_len, max_user);
             max_date = std::max(l->date_len,  max_date);
             max_date_unit = std::max(l->date_unit_len, max_date_unit);
             max_size = std::max(l->size_len, max_size);
+            max_len = std::max(l->clean_len, max_len);
         }
 
         for (const auto l : *lst) {
-            l->list(max_user, max_date, max_date_unit, max_size);
+            l->list(max_user, max_date, max_date_unit, max_size, max_len);
         }
     } else {
         struct winsize w = { 0 };
@@ -459,6 +461,7 @@ void loadconfig()
 
     settings.forced_columns = 0;
 
+    settings.format = cpp11_getstring(ini, "symbols:format", " @p    @u   @d  @s  @f");
     // NOLINTNEXTLINE
     settings.size_number_color = iniparser_getboolean(ini, "settings:size_number_color", true);
     // NOLINTNEXTLINE
@@ -668,7 +671,7 @@ int main(int argc, const char *argv[])
 
     while (parse) {
         // NOLINTNEXTLINE
-        int c = getopt(argc, const_cast<char **>(argv), "AalrtfSLnhNc:");
+        int c = getopt(argc, const_cast<char **>(argv), "AalrtfSLnhNc:F:");
 
         switch (c) {
             case 'c':
@@ -714,6 +717,11 @@ int main(int argc, const char *argv[])
             case 'N':
                 settings.no_conf = true;
                 loadconfig();
+                break;
+
+            case 'F':
+                settings.format = optarg;
+                settings.list = true;
                 break;
 
             case 'h':

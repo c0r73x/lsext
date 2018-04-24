@@ -4,6 +4,10 @@ size_number_color = 1
 ; use idividual color for date number
 date_number_color = 1
 
+; Default list format
+; p = params, u = user/group, d = date, s = size, f = file
+format = " @p    @u   @d  @s  @f"
+
 show_hidden = 0
 list = 0
 resolve_links = 0
