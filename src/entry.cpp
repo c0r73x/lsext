@@ -28,6 +28,10 @@
 #elif __APPLE__
     #include <sys/types.h>
     #include <sys/acl.h>
+
+    #include <sys/param.h>
+    #include <sys/ucred.h>
+    #include <sys/mount.h>
 #endif
 
 #include "gsl-lite.h"
@@ -144,13 +148,17 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
         struct stat parent = {0};
         struct stat check = {0};
         struct stat target = {0};
+
+        #ifdef __linux__
         struct mntent *mnt = nullptr;
+        #endif
 
         char *ppath = dirname(fullpath);
         FILE *fp = setmntent("/proc/mounts", "r");
 
         if (fp != nullptr && stat(ppath, &parent) == 0) {
             if (st->st_dev != parent.st_dev || st->st_ino == parent.st_ino) {
+                #ifdef __linux__
                 while ((mnt = getmntent(fp)) != nullptr) {
                     if (stat(mnt->mnt_dir, &check) != 0) {
                         continue;
@@ -161,7 +169,6 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
                         strcmp(mnt->mnt_type, "autofs") != 0
                     ) {
                         endmntent(fp);
-
 
                         this->islink = true;
                         this->target = mnt->mnt_fsname;
@@ -182,10 +189,39 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
                                );
                     }
                 }
+                #elif __APPLE__
+                struct statfs* mounts;
+                int num = getmntinfo(&mounts, MNT_WAIT);
 
+                if (num != 0) {
+                    for (int i = 0; i < num; i++) {
+                        if (st->st_dev == mounts[i].f_fsid.val[0]) {
+                            this->islink = true;
+                            this->target = mounts[i].f_mntfromname;
+
+                            if (stat(mounts[i].f_mntfromname, &target) == 0) {
+                                this->target_color = getColor(
+                                                         mounts[i].f_mntfromname,
+                                                         target.st_mode
+                                                     );
+                            } else {
+                                this->target_color = findColor(SLK_CHR);
+                            }
+
+                            return colorize(
+                                       settings.symbols.suffix.mountpoint,
+                                       settings.color.suffix.mountpoint,
+                                       true
+                                   );
+                        }
+                    }
+                }    
+                #endif
             }
 
+            #ifdef __linux__
             endmntent(fp);
+            #endif
         }
     }
 
