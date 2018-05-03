@@ -275,10 +275,10 @@ private:
     std::string target_color;
 
     static char fileTypeLetter(uint32_t mode);
-    static char *lsPerms(uint32_t mode);
     static DateFormat timeAgo(int64_t ftime);
     static DateFormat toDateFormat(const std::string &num, int unit);
     static std::string colorize(std::string input, color_t color, bool ending);
+    static std::string lsPerms(uint32_t mode);
     static uint32_t cleanlen(std::string input);
     std::string print_format(const char c, int max_user, int max_date,
                              int max_date_unit, int max_size, int max_flen);

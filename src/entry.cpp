@@ -820,7 +820,7 @@ char Entry::fileHasAcl(char const *name, struct stat const *sb)
     return ' ';
 }
 
-char *Entry::lsPerms(uint32_t mode)
+std::string Entry::lsPerms(uint32_t mode)
 {
     static const char *rwx[] = {
         "---",
@@ -833,7 +833,8 @@ char *Entry::lsPerms(uint32_t mode)
         "rwx"
     };
 
-    static char bits[11];
+    char bits[11] = {0};
+    std::string sbits;
 
     bits[0] = static_cast<char>(fileTypeLetter(mode));
 
@@ -854,7 +855,8 @@ char *Entry::lsPerms(uint32_t mode)
     }
 
     bits[10] = '\0';
-    return &bits[0];
+    sbits = &bits[0];
+    return sbits;
 }
 
 std::string Entry::unitConv(float size)
