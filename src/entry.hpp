@@ -64,6 +64,7 @@ struct color_t {
 
 struct settings_t { // NOLINT
     bool resolve_links;
+    bool resolve_mounts;
     bool resolve_repos;
     bool show_hidden;
     bool reversed;
@@ -91,6 +92,7 @@ struct settings_t { // NOLINT
             color_t exec;
             color_t dir;
             color_t link;
+            color_t mountpoint;
         } suffix;
 
         struct date_t {
@@ -171,6 +173,7 @@ struct settings_t { // NOLINT
             std::string exec;
             std::string dir;
             std::string link;
+            std::string mountpoint;
         } suffix;
 
         struct user_t {
@@ -280,6 +283,7 @@ private:
     std::string print_format(const char c, int max_user, int max_date,
                              int max_date_unit, int max_size, int max_flen);
 
+    std::string isMountpoint(char* fullpath, struct stat *st);
     std::string unitConv(float size);
     std::string findColor(const char *file);
     std::string getColor(const char *file, uint32_t mode);

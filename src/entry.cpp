@@ -16,8 +16,10 @@
 #include <grp.h>
 #include <libgen.h>
 #include <linux/xattr.h>
+#include <mntent.h>
 #include <pwd.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <sys/xattr.h>
 #include <unistd.h>
 #include <wordexp.h>
@@ -128,6 +130,61 @@ uint32_t Entry::cleanlen(std::string input)
 
     uni_re.GlobalReplace(" ", &input);
     return input.length();
+}
+
+std::string Entry::isMountpoint(char* fullpath, struct stat *st) {
+    if (settings.resolve_mounts) {
+        struct stat parent = {0};
+        struct stat check = {0};
+        struct stat target = {0};
+        struct mntent *mnt = nullptr;
+
+        char *ppath = dirname(fullpath);
+        FILE *fp = setmntent("/proc/mounts", "r");
+
+        if (fp != nullptr && stat(ppath, &parent) == 0) {
+            if (st->st_dev != parent.st_dev || st->st_ino == parent.st_ino) {
+                while ((mnt = getmntent(fp)) != nullptr) {
+                    if (stat(mnt->mnt_dir, &check) != 0) {
+                        continue;
+                    }
+
+                    if (
+                        check.st_dev == st->st_dev &&
+                        strcmp(mnt->mnt_type, "autofs") != 0
+                    ) {
+                        endmntent(fp);
+
+
+                        this->islink = true;
+                        this->target = mnt->mnt_fsname;
+
+                        if(stat(mnt->mnt_fsname, &target) == 0) {
+                            this->target_color = getColor(
+                                mnt->mnt_fsname,
+                                target.st_mode
+                            );
+                        }
+
+                        return colorize(
+                            settings.symbols.suffix.mountpoint,
+                            settings.color.suffix.mountpoint,
+                            true
+                        );
+                    }
+                }
+
+            }
+
+            endmntent(fp);
+        }
+    }
+
+    return colorize(
+        settings.symbols.suffix.dir,
+        settings.color.suffix.dir,
+        true
+    );
 }
 
 Entry::Entry(const char *file, char *fullpath, struct stat *st,
@@ -257,7 +314,11 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
 
             if ((readlink(fullpath, &target[0], sizeof(target))) >= 0) {
                 if (settings.list) {
-                    this->suffix = " -> ";
+                    this->suffix = colorize(
+                        settings.symbols.suffix.link,
+                        settings.color.suffix.link,
+                        true
+                    );
                 }
 
                 this->islink = true;
@@ -348,12 +409,8 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
         this->isdir = false;
 
         if (S_ISDIR(st->st_mode)) { // NOLINT
-            this->suffix = colorize(
-                               settings.symbols.suffix.dir,
-                               settings.color.suffix.dir,
-                               true
-                           );
             this->isdir = true;
+            this->suffix = isMountpoint(fullpath, st);
         } else if ((st->st_mode & S_IEXEC) != 0 && !islink) { // NOLINT
             this->suffix = colorize(
                                settings.symbols.suffix.exec,

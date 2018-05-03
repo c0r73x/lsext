@@ -11,6 +11,7 @@ format = " @p    @u   @d  @s  @f"
 show_hidden = 0
 list = 0
 resolve_links = 0
+resolve_mounts = 1
 reversed = 0
 dirs_first = 1
 resolve_repos = 1
@@ -24,6 +25,7 @@ sort = 0
 suffix_exec_fg = 10
 suffix_dir_fg = -1
 suffix_link_fg = -1
+suffix_mountpoint_fg = -1
 
 perm_none_fg = 0
 perm_exec_fg = 2
@@ -82,7 +84,8 @@ git_repo_bare_fg = 4
 [symbols]
 suffix_exec = "*"
 suffix_dir = "/"
-suffix_link = "@"
+suffix_link = " -> "
+suffix_mountpoint = " @ "
 
 user_separator = ":"
 

@@ -477,6 +477,8 @@ void loadconfig()
 
     // NOLINTNEXTLINE
     settings.resolve_links = iniparser_getboolean(ini, "settings:resolve_links", false);
+    // NOLINTNEXTLINE
+    settings.resolve_mounts = iniparser_getboolean(ini, "settings:resolve_mounts", true);
 
     // NOLINTNEXTLINE
     settings.resolve_repos = iniparser_getboolean(ini, "settings:resolve_repos", true);
@@ -495,10 +497,12 @@ void loadconfig()
     settings.color.suffix.exec.fg = iniparser_getint(ini, "colors:suffix_exec_fg", 10);
     settings.color.suffix.dir.fg = iniparser_getint(ini, "colors:suffix_dir_fg", -1);
     settings.color.suffix.link.fg = iniparser_getint(ini, "colors:suffix_link_fg", -1);
+    settings.color.suffix.mountpoint.fg = iniparser_getint(ini, "colors:suffix_mountpoint_fg", -1);
 
     settings.color.suffix.exec.bg = iniparser_getint(ini, "colors:suffix_exec_bg", -1);
     settings.color.suffix.dir.bg = iniparser_getint(ini, "colors:suffix_dir_bg", -1);
     settings.color.suffix.link.bg = iniparser_getint(ini, "colors:suffix_link_bg", -1);
+    settings.color.suffix.mountpoint.bg= iniparser_getint(ini, "colors:suffix_mointpoint_fg", -1);
 
     settings.color.perm.none.fg = iniparser_getint(ini, "colors:perm_none_fg", 0);
     settings.color.perm.exec.fg = iniparser_getint(ini, "colors:perm_exec_fg", 2);
@@ -572,9 +576,10 @@ void loadconfig()
 
     settings.symbols.user.separator = cpp11_getstring(ini, "symbols:user_separator", ":");
 
-    settings.symbols.suffix.exec = cpp11_getstring(ini, "symbols:prefix_exec", "*");
-    settings.symbols.suffix.dir = cpp11_getstring(ini, "symbols:prefix_exec", "/");
-    settings.symbols.suffix.link = cpp11_getstring(ini, "symbols:prefix_exec", "@");
+    settings.symbols.suffix.exec = cpp11_getstring(ini, "symbols:suffix_exec", "*");
+    settings.symbols.suffix.dir = cpp11_getstring(ini, "symbols:suffix_dir", "/");
+    settings.symbols.suffix.link = cpp11_getstring(ini, "symbols:suffix_link", " -> ");
+    settings.symbols.suffix.mountpoint = cpp11_getstring(ini, "symbols:suffix_mountpoint", " @ ");
 
     settings.symbols.size.byte = cpp11_getstring(ini, "symbols:size_byte", "B");
     settings.symbols.size.kilo = cpp11_getstring(ini, "symbols:size_kilo", "K");
@@ -671,7 +676,7 @@ int main(int argc, const char *argv[])
 
     while (parse) {
         // NOLINTNEXTLINE
-        int c = getopt(argc, const_cast<char **>(argv), "AalrtfSLnhNc:F:");
+        int c = getopt(argc, const_cast<char **>(argv), "AalrtfSLMnhNc:F:");
 
         switch (c) {
             case 'c':
@@ -680,6 +685,10 @@ int main(int argc, const char *argv[])
 
             case 'L':
                 settings.resolve_links = !settings.resolve_links;
+                break;
+
+            case 'M':
+                settings.resolve_mounts = !settings.resolve_mounts;
                 break;
 
             case 'a':
