@@ -146,10 +146,10 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
 {
     if (settings.resolve_mounts) {
         struct stat parent = {0};
-        struct stat check = {0};
         struct stat target = {0};
 
         #ifdef __linux__
+        struct stat check = {0};
         struct mntent *mnt = nullptr;
         #endif
 
