@@ -968,13 +968,13 @@ DateFormat Entry::timeAgo(int64_t ftime)
         return toDateFormat("<", DATE_SEC); // NOLINT
     }
 
-    if (delta < 60) {
+    if (delta < 45) {
         return toDateFormat(std::to_string(rel), DATE_SEC);
     }
 
     rel /= 60;
 
-    if (delta < 120) {
+    if (delta < 60) {
         return toDateFormat("<", DATE_MIN); // NOLINT
     }
 
@@ -984,40 +984,40 @@ DateFormat Entry::timeAgo(int64_t ftime)
 
     rel /= 60;
 
-    if (delta < 5400) {
+    if (delta < 3600) {
         return toDateFormat("<", DATE_HOUR); // NOLINT
     }
 
-    if (delta < 129600) {
+    if (delta < 64800) {
         return toDateFormat(std::to_string(rel), DATE_HOUR);
     }
 
     rel /= 24;
 
-    if (delta < 172800) {
+    if (delta < 86400) {
         return toDateFormat("<", DATE_DAY); // NOLINT
     }
 
-    if (delta < 604800) {
+    if (delta < 453600) {
         return toDateFormat(std::to_string(rel), DATE_DAY);
     }
 
     rel /= 7;
     
-    if (delta < 864000) {
+    if (delta < 604800) {
         return toDateFormat("<", DATE_WEEK); // NOLINT
     }
 
-    if (delta < 2592000) {
+    if (delta < 1814400) {
         return toDateFormat(std::to_string(rel), DATE_WEEK);
     }
     rel /= 4;
 
-    if (delta < 5184000) {
+    if (delta < 2419200) {
         return toDateFormat("<", DATE_MON); // NOLINT
     }
 
-    if (delta < 31104000) {
+    if (delta < 29030400) {
         return toDateFormat(std::to_string(rel), DATE_MON);
     }
 
