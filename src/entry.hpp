@@ -53,6 +53,7 @@ enum dateunit_t {
     DATE_MIN,
     DATE_HOUR,
     DATE_DAY,
+    DATE_WEEK,
     DATE_MON,
     DATE_YEAR,
 };
@@ -102,6 +103,7 @@ struct settings_t { // NOLINT
             color_t min;
             color_t hour;
             color_t day;
+            color_t week;
             color_t mon;
             color_t year;
             color_t other;
@@ -185,6 +187,7 @@ struct settings_t { // NOLINT
             std::string min;
             std::string hour;
             std::string day;
+            std::string week;
             std::string mon;
             std::string year;
         } date;

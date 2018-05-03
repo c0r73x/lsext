@@ -927,6 +927,7 @@ DateFormat Entry::toDateFormat(const std::string &num, int unit)
         settings.symbols.date.min.c_str(),
         settings.symbols.date.hour.c_str(),
         settings.symbols.date.day.c_str(),
+        settings.symbols.date.week.c_str(),
         settings.symbols.date.mon.c_str(),
         settings.symbols.date.year.c_str(),
     };
@@ -936,6 +937,7 @@ DateFormat Entry::toDateFormat(const std::string &num, int unit)
         settings.color.date.min,
         settings.color.date.hour,
         settings.color.date.day,
+        settings.color.date.week,
         settings.color.date.mon,
         settings.color.date.year,
     };
@@ -996,11 +998,20 @@ DateFormat Entry::timeAgo(int64_t ftime)
         return toDateFormat("<", DATE_DAY); // NOLINT
     }
 
-    if (delta < 2592000) {
+    if (delta < 518400) {
         return toDateFormat(std::to_string(rel), DATE_DAY);
     }
 
-    rel /= 30;
+    rel /= 7;
+    
+    if (delta < 604800) {
+        return toDateFormat("<", DATE_WEEK); // NOLINT
+    }
+
+    if (delta < 2592000) {
+        return toDateFormat(std::to_string(rel), DATE_WEEK);
+    }
+    rel /= 4;
 
     if (delta < 5184000) {
         return toDateFormat("<", DATE_MON); // NOLINT

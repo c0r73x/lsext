@@ -579,6 +579,7 @@ void loadconfig()
     settings.color.date.min.fg = iniparser_getint(ini, "colors:date_min_fg", 2);
     settings.color.date.hour.fg = iniparser_getint(ini, "colors:date_hour_fg", 2);
     settings.color.date.day.fg = iniparser_getint(ini, "colors:date_day_fg", 2);
+    settings.color.date.week.fg = iniparser_getint(ini, "colors:date_week_fg", 2);
     settings.color.date.mon.fg = iniparser_getint(ini, "colors:date_mon_fg", 2);
     settings.color.date.year.fg = iniparser_getint(ini, "colors:date_year_fg", 2);
     settings.color.date.other.fg = iniparser_getint(ini, "colors:date_other_fg", 2);
@@ -587,6 +588,7 @@ void loadconfig()
     settings.color.date.min.bg = iniparser_getint(ini, "colors:date_min_bg", -1);
     settings.color.date.hour.bg = iniparser_getint(ini, "colors:date_hour_bg", -1);
     settings.color.date.day.bg = iniparser_getint(ini, "colors:date_day_bg", -1);
+    settings.color.date.week.bg = iniparser_getint(ini, "colors:date_week_bg", -1);
     settings.color.date.mon.bg = iniparser_getint(ini, "colors:date_mon_bg", -1);
     settings.color.date.year.bg = iniparser_getint(ini, "colors:date_year_bg", -1);
     settings.color.date.other.bg = iniparser_getint(ini, "colors:date_other_bg", -1);
@@ -609,6 +611,7 @@ void loadconfig()
     settings.symbols.date.min = cpp11_getstring(ini, "symbols:date_min", "min");
     settings.symbols.date.hour = cpp11_getstring(ini, "symbols:date_hour", "hour");
     settings.symbols.date.day = cpp11_getstring(ini, "symbols:date_day", "day");
+    settings.symbols.date.week = cpp11_getstring(ini, "symbols:date_week", "week");
     settings.symbols.date.mon = cpp11_getstring(ini, "symbols:date_mon", "mon");
     settings.symbols.date.year = cpp11_getstring(ini, "symbols:date_year", "year");
 
