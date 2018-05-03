@@ -159,12 +159,11 @@ std::string Entry::isMountpoint(char* fullpath, struct stat *st) {
                         this->islink = true;
                         this->target = mnt->mnt_fsname;
 
-                        if(stat(mnt->mnt_fsname, &target) == 0) {
-                            this->target_color = getColor(
+                        stat(mnt->mnt_fsname, &target);
+                        this->target_color = getColor(
                                 mnt->mnt_fsname,
                                 target.st_mode
-                            );
-                        }
+                                );
 
                         return colorize(
                             settings.symbols.suffix.mountpoint,
