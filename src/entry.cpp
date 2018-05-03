@@ -132,7 +132,8 @@ uint32_t Entry::cleanlen(std::string input)
     return input.length();
 }
 
-std::string Entry::isMountpoint(char* fullpath, struct stat *st) {
+std::string Entry::isMountpoint(char *fullpath, struct stat *st)
+{
     if (settings.resolve_mounts) {
         struct stat parent = {0};
         struct stat check = {0};
@@ -159,17 +160,20 @@ std::string Entry::isMountpoint(char* fullpath, struct stat *st) {
                         this->islink = true;
                         this->target = mnt->mnt_fsname;
 
-                        stat(mnt->mnt_fsname, &target);
-                        this->target_color = getColor(
-                                mnt->mnt_fsname,
-                                target.st_mode
-                                );
+                        if (stat(mnt->mnt_fsname, &target) == 0) {
+                            this->target_color = getColor(
+                                                     mnt->mnt_fsname,
+                                                     target.st_mode
+                                                 );
+                        } else {
+                            this->target_color = findColor(SLK_CHR);
+                        }
 
                         return colorize(
-                            settings.symbols.suffix.mountpoint,
-                            settings.color.suffix.mountpoint,
-                            true
-                        );
+                                   settings.symbols.suffix.mountpoint,
+                                   settings.color.suffix.mountpoint,
+                                   true
+                               );
                     }
                 }
 
@@ -180,10 +184,10 @@ std::string Entry::isMountpoint(char* fullpath, struct stat *st) {
     }
 
     return colorize(
-        settings.symbols.suffix.dir,
-        settings.color.suffix.dir,
-        true
-    );
+               settings.symbols.suffix.dir,
+               settings.color.suffix.dir,
+               true
+           );
 }
 
 Entry::Entry(const char *file, char *fullpath, struct stat *st,
@@ -314,10 +318,10 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
             if ((readlink(fullpath, &target[0], sizeof(target))) >= 0) {
                 if (settings.list) {
                     this->suffix = colorize(
-                        settings.symbols.suffix.link,
-                        settings.color.suffix.link,
-                        true
-                    );
+                                       settings.symbols.suffix.link,
+                                       settings.color.suffix.link,
+                                       true
+                                   );
                 }
 
                 this->islink = true;
