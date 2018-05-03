@@ -31,7 +31,7 @@ set(COMMON_SRC
 include_directories(
     "src/"
     ${GIT2_INCLUDE_DIR}
-    ${INIPARSER_INCLUDE_DIR}
+    ${INIPARSER_INCLUDE_DIRS}
     ${PCRECPP_INCLUDE_DIRS}
 )
 
@@ -41,6 +41,6 @@ install(TARGETS ${CMAKE_PROJECT_NAME} RUNTIME DESTINATION bin)
 target_link_libraries(
     ${CMAKE_PROJECT_NAME}
     ${GIT2_LIBRARY}
-    ${INIPARSER_LIBRARY}
+    ${INIPARSER_LIBRARIES}
     ${PCRECPP_LIBRARIES}
 )
