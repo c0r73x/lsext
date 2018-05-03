@@ -145,7 +145,7 @@ uint32_t Entry::cleanlen(std::string input)
 
 std::string Entry::isMountpoint(char *fullpath, struct stat *st)
 {
-    if (settings.resolve_mounts) {
+    if (settings.resolve_mounts && settings.list) {
         struct stat parent = {0};
         struct stat target = {0};
 
@@ -618,7 +618,7 @@ void Entry::print(int max_len)
     // NOLINTNEXTLINE
     printf(
         "%s",
-        (git + color + file + suffix + std::string(max_len - clean_len, ' ')).c_str()
+        (git + color + file+ suffix + std::string(max_len - clean_len, ' ')).c_str()
     );
 }
 
