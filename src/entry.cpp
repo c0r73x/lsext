@@ -33,6 +33,13 @@ std::unordered_map<std::string, std::string> colors;
 std::unordered_map<uint8_t, std::string> uid_cache;
 std::unordered_map<uint8_t, std::string> gid_cache;
 
+static inline void rtrim(std::string &s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
+
 bool wildcmp(const char *w, const char *s, uint8_t wl, uint8_t sl)
 {
     const char *wp = &w[wl]; // NOLINT
@@ -438,22 +445,26 @@ std::string Entry::print_format(const char c, int max_user, int max_date,
     switch (c) {
         case 'p':
             return perms + prefix;
+
         case 'u': {
             return user + std::string(max_user - user_len, ' ');
         }
+
         case 'd': {
             return date.first + std::string(max_date - date_len, ' ') +
-                " " + date.second + std::string(max_date_unit - date_unit_len, ' ');
+                   " " + date.second + std::string(max_date_unit - date_unit_len, ' ');
         }
+
         case 's': {
             return std::string(max_size - size_len, ' ') + size;
         }
+
         case 'f': {
             return
                 #ifdef USE_GIT
-                    git +
+                git +
                 #else
-                    "" +
+                "" +
                 #endif
                 color + file + suffix + target_color + target +
                 std::string(max_flen - clean_len, ' ');
@@ -489,6 +500,7 @@ void Entry::list(int max_user, int max_date, int max_date_unit,
         }
     }
 
+    rtrim(output);
     printf("%s\033[0m\n", output.c_str()); // NOLINT
 }
 
