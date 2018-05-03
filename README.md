@@ -8,6 +8,7 @@ Inspired by coreutils, ls++ and others.
 ## Dependencies
 libgit2
 iniparser 
+re2
 
 # Build dependencies
 CMake
