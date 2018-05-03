@@ -5,11 +5,43 @@ stuff
 Inspired by coreutils, ls++ and others.
 
 
-## Dependencies
-libgit2
-iniparser 
-re2
+## Customize
+See example [config](https://github.com/c0r73x/lsext/blob/master/lsext.ini.sample) 
 
-# Build dependencies
-CMake
+## Dependencies
+------------------
+| Name        |    Required        |   |
+| ------------- |:-------------:| -----:|
+| Iniparser     | **Required** | Recommended version 4.x, min 3.1 |
+| re2 | **Required** | |
+| OpenMP     | Optional | **Enabled by default** |
+| libgit2     | Optional | Recommended version 0.24.1+ **Enabled by default** |
+
+
+## Build dependencies
+CMake    
 C++11 compatible compiler 
+
+## Usage
+
+#### Flags
+------------------
+| Name        |            |
+| ------------- |:-------------:|
+| c     | |
+| L | | |
+| M     |  |
+| a     | |
+| r     | |
+| f     |  |
+| t     | Sort by modified date |
+| S     | Sort by size |
+| A     | Sort by alphabetical |
+| l     | |
+| n     | Toggle colors (on/off)  |
+| N     | Load with default, ignore config |
+| F     |  |
+| h     | Help |
+
+## Licence
+MIT License
