@@ -8,6 +8,10 @@ set(CXX_STANDARD_REQUIRED)
 
 add_definitions("-Werror -Wall -pedantic")
 
+if(APPLE)
+    add_definitions("-stdlib=libc++")
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 option(USEOPENMP "Enable OpenMP threading" ON)
