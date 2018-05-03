@@ -6,9 +6,9 @@ Inspired by coreutils, ls++ and others.
 
 
 ## Dependencies
-libgit2  
+libgit2
 iniparser 
 
 # Build dependencies
-CMake  
-C++14 compatible compiler 
+CMake
+C++11 compatible compiler 
