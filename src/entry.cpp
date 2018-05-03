@@ -15,7 +15,6 @@
 #include <dirent.h>
 #include <grp.h>
 #include <libgen.h>
-#include <linux/xattr.h>
 #include <mntent.h>
 #include <pwd.h>
 #include <sys/stat.h>
@@ -23,6 +22,13 @@
 #include <sys/xattr.h>
 #include <unistd.h>
 #include <wordexp.h>
+
+#ifdef __linux__
+    #include <linux/xattr.h>
+#elif __APPLE__
+    #include <sys/types.h>
+    #include <sys/acl.h>
+#endif
 
 #include "gsl-lite.h"
 
@@ -408,7 +414,7 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
         this->date_unit_len = cleanlen(this->date.second);
         this->size_len = cleanlen(this->size);
 
-        this->prefix = (fileHasAcl(fullpath, st) > 0) ? '+' : ' ';
+        this->prefix = fileHasAcl(fullpath, st);
         this->isdir = false;
 
         if (S_ISDIR(st->st_mode)) { // NOLINT
@@ -714,37 +720,63 @@ char Entry::fileTypeLetter(uint32_t mode)
     return '?';
 }
 
-int Entry::fileHasAcl(char const *name, struct stat const *sb)
+std::string Entry::fileHasAcl(char const *name, struct stat const *sb)
 {
-    ssize_t ret = 0;
+    ssize_t  xattr;
 
     #ifdef S_ISLNK
 
     if (S_ISLNK(sb->st_mode)) { // NOLINT
-        return 0;
+        return " ";
     }
 
     #endif
 
-    ret = getxattr(name, XATTR_NAME_POSIX_ACL_ACCESS, nullptr, 0);
+    #ifdef __linux__
+    xattr = getxattr(name, XATTR_NAME_POSIX_ACL_ACCESS, nullptr, 0);
 
-    if (ret < 0 && errno == ENODATA) {
-        ret = 0;
-    } else if (ret > 0) {
-        return 1;
+    if (xattr < 0 && errno == ENODATA) {
+        xattr = 0;
+    } else if (xattr > 0) {
+        return "+";
     }
 
-    if (ret == 0 && S_ISDIR(sb->st_mode)) { // NOLINT
-        ret = getxattr(name, XATTR_NAME_POSIX_ACL_DEFAULT, nullptr, 0);
+    if (xattr == 0 && S_ISDIR(sb->st_mode)) { // NOLINT
+        xattr = getxattr(name, XATTR_NAME_POSIX_ACL_DEFAULT, nullptr, 0);
 
-        if (ret < 0 && errno == ENODATA) {
-            ret = 0;
-        } else if (ret > 0) {
-            return 1;
+        if (xattr < 0 && errno == ENODATA) {
+            xattr = 0;
+        } else if (xattr > 0) {
+            return "+";
         }
     }
 
-    return ret;
+    #elif __APPLE__
+
+    acl_entry_t dummy;
+    acl_t acl = acl_get_link_np(name, ACL_TYPE_EXTENDED);
+
+    if (acl && acl_get_entry(acl, ACL_FIRST_ENTRY, &dummy) == -1) {
+        acl_free(acl);
+        acl = nullptr;
+    }
+
+    xattr = listxattr(name, NULL, 0, XATTR_NOFOLLOW);
+
+    if (xattr < 0) {
+        xattr = 0;
+    }
+
+    if (xattr > 0) {
+        return "@";
+    }
+
+    if (acl != NULL) {
+        return "+";
+    }
+    #endif
+
+    return " ";
 }
 
 char *Entry::lsPerms(uint32_t mode)
