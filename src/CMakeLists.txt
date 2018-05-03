@@ -19,6 +19,7 @@ endif()
 
 find_package(git2 REQUIRED)
 find_package(Iniparser REQUIRED)
+find_package(PCRECPP REQUIRED)
 
 set(COMMON_SRC
     "main.cpp"
@@ -29,6 +30,7 @@ include_directories(
     "src/"
     ${GIT2_INCLUDE_DIR}
     ${INIPARSER_INCLUDE_DIR}
+    ${PCRECPP_INCLUDE_DIRS}
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${COMMON_SRC})
@@ -38,5 +40,5 @@ target_link_libraries(
     ${CMAKE_PROJECT_NAME}
     ${GIT2_LIBRARY}
     ${INIPARSER_LIBRARY}
-    pcrecpp
+    ${PCRECPP_LIBRARIES}
 )
