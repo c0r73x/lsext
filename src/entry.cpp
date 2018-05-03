@@ -15,7 +15,6 @@
 #include <dirent.h>
 #include <grp.h>
 #include <libgen.h>
-#include <mntent.h>
 #include <pwd.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
@@ -25,6 +24,7 @@
 
 #ifdef __linux__
     #include <linux/xattr.h>
+    #include <mntent.h>
 #elif __APPLE__
     #include <sys/types.h>
     #include <sys/acl.h>
