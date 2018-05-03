@@ -157,13 +157,14 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
         #endif
 
         if (
-                #ifdef __linux__
+            #ifdef __linux__
                 fp != nullptr &&
-                #endif
-                stat(ppath, &parent) == 0
-           ) {
+            #endif
+            stat(ppath, &parent) == 0
+        ) {
             if (st->st_dev != parent.st_dev || st->st_ino == parent.st_ino) {
                 #ifdef __linux__
+
                 while ((mnt = getmntent(fp)) != nullptr) {
                     if (stat(mnt->mnt_dir, &check) != 0) {
                         continue;
@@ -199,7 +200,7 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
 
                 #elif __APPLE__
 
-                struct statfs* mounts;
+                struct statfs *mounts;
                 int num = getmntinfo(&mounts, MNT_WAIT);
 
                 if (num != 0) {
@@ -224,7 +225,7 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
                                    );
                         }
                     }
-                }    
+                }
 
                 #endif
             }
@@ -775,6 +776,7 @@ std::string Entry::fileHasAcl(char const *name, struct stat const *sb)
     #endif
 
     #ifdef __linux__
+
     xattr = getxattr(name, XATTR_NAME_POSIX_ACL_ACCESS, nullptr, 0);
 
     if (xattr < 0 && errno == ENODATA) {
@@ -816,6 +818,7 @@ std::string Entry::fileHasAcl(char const *name, struct stat const *sb)
     if (acl != NULL) {
         return "+";
     }
+
     #endif
 
     return " ";
