@@ -998,13 +998,13 @@ DateFormat Entry::timeAgo(int64_t ftime)
         return toDateFormat("<", DATE_DAY); // NOLINT
     }
 
-    if (delta < 518400) {
+    if (delta < 604800) {
         return toDateFormat(std::to_string(rel), DATE_DAY);
     }
 
     rel /= 7;
     
-    if (delta < 604800) {
+    if (delta < 864000) {
         return toDateFormat("<", DATE_WEEK); // NOLINT
     }
 
