@@ -21,6 +21,14 @@ extern "C" {
     #include <sys/stat.h>
     #include <unistd.h>
 
+    #ifdef USE_OPENMP
+        #include <omp.h>
+    #else
+        using omp_int_t = int;
+        inline omp_int_t omp_get_thread_num() { return 0;}
+        inline omp_int_t omp_get_num_threads() { return 1;}
+    #endif
+
     #ifdef USE_GIT
         #include <git2.h>
     #endif
@@ -32,6 +40,17 @@ using FileList = std::vector<Entry *>;
 using DirList = std::unordered_map<std::string, FileList>;
 
 settings_t settings = {0}; // NOLINT
+
+static inline const char *cpp11_getstring(dictionary *d, const char *key, const char *def)
+{
+    return iniparser_getstring(d, key, const_cast<char *>(def)); // NOLINT
+}
+
+static inline bool exists(const char *name)
+{
+    struct stat buffer = { 0 };
+    return (stat(name, &buffer) == 0);
+}
 
 void initcolors()
 {
@@ -109,12 +128,17 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 
     size_t count = git_status_list_entrycount(statuses);
 
-    for (size_t i = 0; i < count; ++i) {
-        const git_status_entry *entry = git_status_byindex(statuses, i);
+    #pragma omp parallel shared(flags, count)
+    {
+        int i = omp_get_thread_num() * count / omp_get_num_threads();
+        int stop = (omp_get_thread_num() + 1) * count / omp_get_num_threads();   
 
-        if (entry->status != 0) {
-            flags |= GIT_DIR_DIRTY;
-            break;
+        for (; i < stop && (flags & GIT_DIR_DIRTY) == 0; ++i) {
+            const git_status_entry *entry = git_status_byindex(statuses, i);
+
+            if (entry->status != 0) {
+                flags |= GIT_DIR_DIRTY;
+            }
         }
     }
 
@@ -276,8 +300,10 @@ FileList listdir(const char *path, const std::string &fp, bool hidden)
     std::string pattern = std::string(path) + fp; // NOLINT
     glob(pattern.c_str(), GLOB_NOSORT, nullptr, &res); // NOLINT
 
-    #pragma omp parallel for shared(lst)
-    for (uint32_t i = 0; i < res.gl_pathc; i++) { // NOLINT
+    uint32_t count = res.gl_pathc;
+
+    #pragma omp parallel for shared(lst, count)
+    for (uint32_t i = 0; i < count; i++) { // NOLINT
         const char *file = basename(res.gl_pathv[i]); // NOLINT
 
         if (file[0] == '.' && (file[1] == 0 || file[1] == '.')) { // NOLINT
@@ -415,17 +441,6 @@ const char *gethome()
     homedir = result->pw_dir;
 
     return homedir;
-}
-
-bool exists(const char *name)
-{
-    struct stat buffer = { 0 };
-    return (stat(name, &buffer) == 0);
-}
-
-const char *cpp11_getstring(dictionary *d, const char *key, const char *def)
-{
-    return iniparser_getstring(d, key, const_cast<char *>(def)); // NOLINT
 }
 
 void loadconfig()

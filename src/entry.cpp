@@ -53,7 +53,7 @@ static inline void rtrim(std::string &s)
     }).base(), s.end());
 }
 
-bool wildcmp(const char *w, const char *s, uint8_t wl, uint8_t sl)
+static inline bool wildcmp(const char *w, const char *s, uint8_t wl, uint8_t sl)
 {
     const char *wp = &w[wl]; // NOLINT
     const char *sp = &s[sl]; // NOLINT

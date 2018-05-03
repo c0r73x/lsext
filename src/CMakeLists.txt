@@ -6,20 +6,33 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CXX_STANDARD_REQUIRED)
 
-add_definitions("-Werror -Wall -pedantic")
+add_definitions("-Werror -Wall -pedantic -Wno-unknown-pragmas")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-option(USEOPENMP "Enable OpenMP threading" ON)
-if(USEOPENMP)
-    find_package(OpenMP)
+option(USE_OPENMP "Enable OpenMP threading" ON)
+option(USE_GIT "Enable GIT" ON)
+
+if(USE_OPENMP)
+    find_package(OpenMP REQUIRED)
+
     if (OPENMP_FOUND)
+        add_definitions(-DUSE_OPENMP)
+
         set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
         set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     endif()
 endif()
 
-find_package(git2 REQUIRED)
+if(USE_GIT)
+    find_package(git2 REQUIRED)
+
+    add_definitions(-DUSE_GIT)
+
+    set (GIT_INCLUDE_DIR "${GIT2_INCLUDE_DIR}")
+    set (GIT_LIBRARY "${GIT2_LIBRARY}")
+endif()
+
 find_package(Iniparser REQUIRED)
 find_package(PCRECPP REQUIRED)
 
@@ -30,7 +43,7 @@ set(COMMON_SRC
 
 include_directories(
     "src/"
-    ${GIT2_INCLUDE_DIR}
+    ${GIT_INCLUDE_DIR}
     ${INIPARSER_INCLUDE_DIRS}
     ${PCRECPP_INCLUDE_DIRS}
 )
@@ -40,7 +53,7 @@ install(TARGETS ${CMAKE_PROJECT_NAME} RUNTIME DESTINATION bin)
 
 target_link_libraries(
     ${CMAKE_PROJECT_NAME}
-    ${GIT2_LIBRARY}
+    ${GIT_LIBRARY}
     ${INIPARSER_LIBRARIES}
     ${PCRECPP_LIBRARIES}
 )

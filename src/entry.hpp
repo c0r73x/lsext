@@ -2,8 +2,6 @@
 #ifndef ENTRY_HPP_
 #define ENTRY_HPP_
 
-#define USE_GIT 1
-
 #include <string>
 #include <unordered_map>
 #include <vector>
