@@ -152,47 +152,44 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
         #ifdef __linux__
         struct mntent *mnt = nullptr;
         char *ppath = dirname(fullpath);
-
-        FILE *fp = setmntent("/proc/mounts", "r");
         #endif
 
-        if (
-            #ifdef __linux__
-                fp != nullptr &&
-            #endif
-            stat(ppath, &parent) == 0
-        ) {
+        if (stat(ppath, &parent) == 0) {
             if (st->st_dev != parent.st_dev || st->st_ino == parent.st_ino) {
                 #ifdef __linux__
 
-                while ((mnt = getmntent(fp)) != nullptr) {
-                    if (stat(mnt->mnt_dir, &check) != 0) {
-                        continue;
-                    }
+                FILE *fp = setmntent("/proc/mounts", "r");
 
-                    if (
-                        check.st_dev == st->st_dev &&
-                        strcmp(mnt->mnt_type, "autofs") != 0
-                    ) {
-                        endmntent(fp);
-
-                        this->islink = true;
-                        this->target = mnt->mnt_fsname;
-
-                        if (stat(mnt->mnt_fsname, &target) == 0) {
-                            this->target_color = getColor(
-                                                     mnt->mnt_fsname,
-                                                     target.st_mode
-                                                 );
-                        } else {
-                            this->target_color = findColor(SLK_CHR);
+                if (fp != nullptr) {
+                    while ((mnt = getmntent(fp)) != nullptr) {
+                        if (stat(mnt->mnt_dir, &check) != 0) {
+                            continue;
                         }
 
-                        return colorize(
-                                   settings.symbols.suffix.mountpoint,
-                                   settings.color.suffix.mountpoint,
-                                   true
-                               );
+                        if (
+                            check.st_dev == st->st_dev &&
+                            strcmp(mnt->mnt_type, "autofs") != 0
+                        ) {
+                            endmntent(fp);
+
+                            this->islink = true;
+                            this->target = mnt->mnt_fsname;
+
+                            if (stat(mnt->mnt_fsname, &target) == 0) {
+                                this->target_color = getColor(
+                                                         mnt->mnt_fsname,
+                                                         target.st_mode
+                                                     );
+                            } else {
+                                this->target_color = findColor(SLK_CHR);
+                            }
+
+                            return colorize(
+                                       settings.symbols.suffix.mountpoint,
+                                       settings.color.suffix.mountpoint,
+                                       true
+                                   );
+                        }
                     }
                 }
 
@@ -763,14 +760,14 @@ char Entry::fileTypeLetter(uint32_t mode)
     return '?';
 }
 
-std::string Entry::fileHasAcl(char const *name, struct stat const *sb)
+char Entry::fileHasAcl(char const *name, struct stat const *sb)
 {
     ssize_t  xattr;
 
     #ifdef S_ISLNK
 
     if (S_ISLNK(sb->st_mode)) { // NOLINT
-        return " ";
+        return ' ';
     }
 
     #endif
@@ -782,7 +779,7 @@ std::string Entry::fileHasAcl(char const *name, struct stat const *sb)
     if (xattr < 0 && errno == ENODATA) {
         xattr = 0;
     } else if (xattr > 0) {
-        return "+";
+        return '+';
     }
 
     if (xattr == 0 && S_ISDIR(sb->st_mode)) { // NOLINT
@@ -791,7 +788,7 @@ std::string Entry::fileHasAcl(char const *name, struct stat const *sb)
         if (xattr < 0 && errno == ENODATA) {
             xattr = 0;
         } else if (xattr > 0) {
-            return "+";
+            return '+';
         }
     }
 
@@ -812,16 +809,16 @@ std::string Entry::fileHasAcl(char const *name, struct stat const *sb)
     }
 
     if (xattr > 0) {
-        return "@";
+        return '@';
     }
 
     if (acl != NULL) {
-        return "+";
+        return '+';
     }
 
     #endif
 
-    return " ";
+    return ' ';
 }
 
 char *Entry::lsPerms(uint32_t mode)

@@ -289,7 +289,7 @@ private:
     std::string getColor(const char *file, uint32_t mode);
     std::string colorperms(std::string input);
 
-    std::string fileHasAcl(char const *name, struct stat const *sb);
+    char fileHasAcl(char const *name, struct stat const *sb);
 };
 
 #endif // ENTRY_HPP_
