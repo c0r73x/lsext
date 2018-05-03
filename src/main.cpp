@@ -7,7 +7,7 @@
 #include <sstream>
 #include <vector>
 
-#include <pcrecpp.h>
+#include <re2/re2.h>
 
 #include "gsl-lite.h"
 #include "entry.hpp"
@@ -38,6 +38,8 @@ extern "C" {
 
 using FileList = std::vector<Entry *>;
 using DirList = std::unordered_map<std::string, FileList>;
+
+static re2::RE2 git_re("/\\.git/?$");
 
 settings_t settings = {0}; // NOLINT
 
@@ -99,9 +101,8 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
                 return UINT_MAX;
             }
 
-            static pcrecpp::RE re("/\\.git/?$");
             rp = root.ptr;
-            re.Replace("", &rp);
+            re2::RE2::Replace(&rp, git_re, "");
         } else {
             git_buf_free(&root);
             return UINT_MAX;
@@ -172,9 +173,8 @@ Entry *addfile(const char *fpath, const char *file)
             return nullptr;
         }
 
-        static pcrecpp::RE re("/\\.git/?$");
         rp = root.ptr;
-        re.Replace("", &rp);
+        re2::RE2::Replace(&rp, git_re, "");
     }
 
     #endif

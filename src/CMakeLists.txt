@@ -34,7 +34,7 @@ if(USE_GIT)
 endif()
 
 find_package(Iniparser REQUIRED)
-find_package(PCRECPP REQUIRED)
+find_package(RE2 REQUIRED)
 
 set(COMMON_SRC
     "main.cpp"
@@ -44,8 +44,8 @@ set(COMMON_SRC
 include_directories(
     "src/"
     ${GIT_INCLUDE_DIR}
+    ${RE2_INCLUDE_DIR}
     ${INIPARSER_INCLUDE_DIRS}
-    ${PCRECPP_INCLUDE_DIRS}
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${COMMON_SRC})
@@ -54,6 +54,6 @@ install(TARGETS ${CMAKE_PROJECT_NAME} RUNTIME DESTINATION bin)
 target_link_libraries(
     ${CMAKE_PROJECT_NAME}
     ${GIT_LIBRARY}
+    ${RE2_LIBRARY}
     ${INIPARSER_LIBRARIES}
-    ${PCRECPP_LIBRARIES}
 )

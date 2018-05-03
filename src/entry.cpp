@@ -10,8 +10,9 @@
 #include <ctime>
 #include <unordered_map>
 
+#include <re2/re2.h>
+
 #include "gsl-lite.h"
-#include <pcrecpp.h>
 
 extern "C" {
     #include <dirent.h>
@@ -130,16 +131,12 @@ std::string Entry::colorize(std::string input, color_t color, bool ending)
 
 uint32_t Entry::cleanlen(std::string input)
 {
-    static pcrecpp::RE esc_re("\033\\[?[;:0-9]*m");
-    static pcrecpp::RE uni_re("[\u0080-\uffff]+");
+    static re2::RE2 esc_re("\033\\[?[;:0-9]*m");
+    static re2::RE2 uni_re("[\u0080-\uffff]+");
 
-    if (esc_re.GlobalReplace("", &input) != 0) {
-        uni_re.GlobalReplace(" ", &input);
+    re2::RE2::GlobalReplace(&input, esc_re, "");
+    re2::RE2::GlobalReplace(&input, uni_re, " ");
 
-        return input.length();
-    }
-
-    uni_re.GlobalReplace(" ", &input);
     return input.length();
 }
 
