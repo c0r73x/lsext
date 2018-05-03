@@ -9,22 +9,24 @@
 
 #include <pcrecpp.h>
 
-#include <dirent.h>
-#include <glob.h>
-#include <libgen.h>
-#include <pwd.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
 #include "gsl-lite.h"
 #include "entry.hpp"
 
-#ifdef USE_GIT
-    #include <git2.h>
-#endif
+extern "C" {
+    #include <dirent.h>
+    #include <glob.h>
+    #include <libgen.h>
+    #include <pwd.h>
+    #include <sys/ioctl.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
 
-#include <iniparser.h>
+    #ifdef USE_GIT
+        #include <git2.h>
+    #endif
+
+    #include <iniparser.h>
+}
 
 using FileList = std::vector<Entry *>;
 using DirList = std::unordered_map<std::string, FileList>;

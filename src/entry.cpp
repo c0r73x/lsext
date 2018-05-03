@@ -10,35 +10,36 @@
 #include <ctime>
 #include <unordered_map>
 
+#include "gsl-lite.h"
 #include <pcrecpp.h>
 
-#include <dirent.h>
-#include <grp.h>
-#include <libgen.h>
-#include <pwd.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
-#include <sys/xattr.h>
-#include <unistd.h>
-#include <wordexp.h>
+extern "C" {
+    #include <dirent.h>
+    #include <grp.h>
+    #include <libgen.h>
+    #include <pwd.h>
+    #include <sys/stat.h>
+    #include <sys/statvfs.h>
+    #include <sys/xattr.h>
+    #include <unistd.h>
+    #include <wordexp.h>
 
-#ifdef __linux__
-    #include <linux/xattr.h>
-    #include <mntent.h>
-#elif __APPLE__
-    #include <sys/types.h>
-    #include <sys/acl.h>
+    #ifdef __linux__
+        #include <linux/xattr.h>
+        #include <mntent.h>
+    #elif __APPLE__
+        #include <sys/types.h>
+        #include <sys/acl.h>
 
-    #include <sys/param.h>
-    #include <sys/ucred.h>
-    #include <sys/mount.h>
-#endif
+        #include <sys/param.h>
+        #include <sys/ucred.h>
+        #include <sys/mount.h>
+    #endif
 
-#include "gsl-lite.h"
-
-#ifdef USE_GIT
-    #include <git2.h>
-#endif
+    #ifdef USE_GIT
+        #include <git2.h>
+    #endif
+}
 
 std::unordered_map<std::string, std::string> colors;
 

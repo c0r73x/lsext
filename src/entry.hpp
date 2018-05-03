@@ -8,7 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include <sys/types.h>
+extern "C" {
+    #include <sys/types.h>
+}
 
 #define SLK_NORM "no"
 #define SLK_FILE "fi"
