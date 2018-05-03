@@ -151,8 +151,9 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
 
         #ifdef __linux__
         struct mntent *mnt = nullptr;
-        char *ppath = dirname(fullpath);
         #endif
+
+        char *ppath = dirname(fullpath);
 
         if (stat(ppath, &parent) == 0) {
             if (st->st_dev != parent.st_dev || st->st_ino == parent.st_ino) {
