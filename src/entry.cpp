@@ -151,12 +151,17 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
 
         #ifdef __linux__
         struct mntent *mnt = nullptr;
+        char *ppath = dirname(fullpath);
+
+        FILE *fp = setmntent("/proc/mounts", "r");
         #endif
 
-        char *ppath = dirname(fullpath);
-        FILE *fp = setmntent("/proc/mounts", "r");
-
-        if (fp != nullptr && stat(ppath, &parent) == 0) {
+        if (
+                #ifdef __linux__
+                fp != nullptr &&
+                #endif
+                stat(ppath, &parent) == 0
+           ) {
             if (st->st_dev != parent.st_dev || st->st_ino == parent.st_ino) {
                 #ifdef __linux__
                 while ((mnt = getmntent(fp)) != nullptr) {
@@ -189,7 +194,11 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
                                );
                     }
                 }
+
+                endmntent(fp);
+
                 #elif __APPLE__
+
                 struct statfs* mounts;
                 int num = getmntinfo(&mounts, MNT_WAIT);
 
@@ -216,12 +225,9 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
                         }
                     }
                 }    
+
                 #endif
             }
-
-            #ifdef __linux__
-            endmntent(fp);
-            #endif
         }
     }
 
