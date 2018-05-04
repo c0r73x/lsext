@@ -1037,7 +1037,7 @@ DateFormat Entry::toDateFormat(const std::string &num, int unit)
            );
 }
 
-DateFormat Entry::isoTime(int64_t ftime) 
+DateFormat Entry::isoTime(time_t ftime) 
 {
     DateFormat output;
     auto tm = std::localtime(&ftime);
@@ -1057,7 +1057,7 @@ DateFormat Entry::isoTime(int64_t ftime)
     return output;
 }
 
-DateFormat Entry::relativeTime(int64_t ftime)
+DateFormat Entry::relativeTime(time_t ftime)
 {
     time_t utime;
     time(&utime);

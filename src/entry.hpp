@@ -258,7 +258,7 @@ public:
     bool isdir;
     bool islink;
 
-    int64_t modified;
+    time_t modified;
     int64_t bsize;
     uint32_t mode;
 
@@ -279,8 +279,8 @@ private:
 
     static char fileTypeLetter(uint32_t mode);
     static DateFormat toDateFormat(const std::string &num, int unit);
-    static DateFormat relativeTime(int64_t ftime);
-    static DateFormat isoTime(int64_t ftime);
+    static DateFormat relativeTime(time_t ftime);
+    static DateFormat isoTime(time_t ftime);
     static std::string colorize(std::string input, color_t color);
     static std::string colorperms(std::string input);
     static uint32_t cleanlen(std::string input);
