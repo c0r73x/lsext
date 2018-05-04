@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <locale>
 #include <unordered_map>
 
 #include <re2/re2.h>
@@ -46,8 +47,6 @@ std::unordered_map<std::string, std::string> colors;
 
 std::unordered_map<uint8_t, std::string> uid_cache;
 std::unordered_map<uint8_t, std::string> gid_cache;
-
-std::unordered_map<int32_t, DateFormat> date_cache;
 
 static inline bool wildcmp(const char *w, const char *s, uint8_t wl,
                            uint8_t sl)
@@ -94,6 +93,17 @@ starCheck:
 
     sp--; // NOLINT
     goto loopStart;
+}
+
+template<typename... Args>
+inline std::string fmt(const char* fmt, Args... args)
+{
+    size_t size = snprintf(nullptr, 0, fmt, args...);
+    std::string buf;
+    buf.reserve(size + 1);
+    buf.resize(size);
+    snprintf(&buf[0], size + 1, fmt, args...);
+    return buf;
 }
 
 std::string Entry::colorize(std::string input, color_t color)
@@ -411,7 +421,7 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
             this->group = cgid->second;
         }
 
-        this->modified = st->st_ctime;
+        this->modified = st->st_mtime;
         this->bsize = st->st_size;
         this->mode = st->st_mode;
         this->fullpath = fullpath;
@@ -511,7 +521,7 @@ std::string Entry::colorperms(std::string input)
     return output;
 }
 
-Segment Entry::format(char c)
+Segment Entry::format(char c, std::string params)
 {
     Segment output;
 
@@ -545,12 +555,22 @@ Segment Entry::format(char c)
         }
 
         case 'r': {
-            output.first = timeAgo(modified).first;
+            output.first = relativeTime(modified).first;
             break;
         }
 
         case 't': {
-            output.first = timeAgo(modified).second;
+            output.first = relativeTime(modified).second;
+            break;
+        }
+
+        case 'D': {
+            output.first = isoTime(modified).first;
+            break;
+        }
+
+        case 'T': {
+            output.first = isoTime(modified).second;
             break;
         }
 
@@ -590,8 +610,8 @@ Segment Entry::format(char c)
 
 void Entry::postprocess()
 {
-    for (size_t pos = 0;
-         (pos = settings.format.find('@', pos)) != std::string::npos;) {
+    for (size_t pos = 0; (pos = settings.format.find('@', pos)) != std::string::npos;) {
+        std::string params;
         pos++;
 
         char c = settings.format.at(pos);
@@ -605,7 +625,7 @@ void Entry::postprocess()
             auto f = processed.find(c);
 
             if (f == processed.end()) {
-                processed[c] = format(c);
+                processed[c] = format(c, params);
             }
         }
     }
@@ -1014,16 +1034,29 @@ DateFormat Entry::toDateFormat(const std::string &num, int unit)
            );
 }
 
-DateFormat Entry::timeAgo(int64_t ftime)
+DateFormat Entry::isoTime(int64_t ftime) 
 {
-    auto date = date_cache.find(ftime);
+    DateFormat output;
+    auto tm = std::localtime(&ftime);
 
-    if (date != date_cache.end()) {
-        return date->second;
-    }
+    output.first = colorize(
+        std::to_string(tm->tm_year + 1900),
+        settings.color.date.year
+    ) + "-" + colorize(
+        fmt("%02d", tm->tm_mon),
+        settings.color.date.mon
+    ) + "-" + colorize(
+        fmt("%02d", tm->tm_mday),
+        settings.color.date.day
+    );
 
-    DateFormat output = relativeTime(ftime);
-    date_cache[ftime] = output;
+    output.second = colorize(
+        fmt("%02d", tm->tm_hour),
+        settings.color.date.hour
+    ) + ":" + colorize(
+        fmt("%02d", tm->tm_min),
+        settings.color.date.min
+    );
 
     return output;
 }

@@ -1,8 +1,7 @@
+#include <algorithm>
 #include <climits>
 #include <cstdlib>
 #include <cstring>
-
-#include <algorithm>
 #include <map>
 #include <sstream>
 #include <vector>
@@ -478,6 +477,7 @@ void loadconfig()
     settings.forced_columns = 0;
 
     settings.format = cpp11_getstring(ini, "symbols:format", " @p    @U  @^r @t  @^s  @f");
+
     // NOLINTNEXTLINE
     settings.size_number_color = iniparser_getboolean(ini, "settings:size_number_color", true);
     // NOLINTNEXTLINE
@@ -698,6 +698,7 @@ int main(int argc, const char *argv[])
     DirList dirs;
 
     settings.no_conf = false;
+
 
     loadconfig();
 
