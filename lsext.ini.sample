@@ -6,8 +6,8 @@ date_number_color = 1
 
 ; Default list format
 ; Use @^ to align to the right
-; p = params (ls-style)
-; P = params (chmod-style)
+; p = perms (ls-style)
+; P = perms (chmod-style)
 ; U = user/group
 ; u = user
 ; g = group
