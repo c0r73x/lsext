@@ -5,8 +5,16 @@ size_number_color = 1
 date_number_color = 1
 
 ; Default list format
-; p = params, u = user/group, d = date, s = size, f = file
-format = " @p    @u   @d  @s  @f"
+; Use @^ to align to the right
+; p = params
+; U = user/group
+; u = user
+; g = group
+; r = relative time
+; t = time symbol
+; s = size
+; f = file
+format = " @p    @U  @^r @t  @^s  @f"
 
 show_hidden = 0
 list = 0

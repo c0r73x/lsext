@@ -15,30 +15,30 @@
 #include "gsl-lite.h"
 
 extern "C" {
-    #include <dirent.h>
-    #include <grp.h>
-    #include <libgen.h>
-    #include <pwd.h>
-    #include <sys/stat.h>
-    #include <sys/statvfs.h>
-    #include <sys/xattr.h>
-    #include <unistd.h>
-    #include <wordexp.h>
+#include <dirent.h>
+#include <grp.h>
+#include <libgen.h>
+#include <pwd.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <sys/xattr.h>
+#include <unistd.h>
+#include <wordexp.h>
 
     #ifdef __linux__
-        #include <linux/xattr.h>
-        #include <mntent.h>
+#include <linux/xattr.h>
+#include <mntent.h>
     #elif __APPLE__
-        #include <sys/types.h>
-        #include <sys/acl.h>
+#include <sys/types.h>
+#include <sys/acl.h>
 
-        #include <sys/param.h>
-        #include <sys/ucred.h>
-        #include <sys/mount.h>
+#include <sys/param.h>
+#include <sys/ucred.h>
+#include <sys/mount.h>
     #endif
 
     #ifdef USE_GIT
-        #include <git2.h>
+#include <git2.h>
     #endif
 }
 
@@ -49,7 +49,8 @@ std::unordered_map<uint8_t, std::string> gid_cache;
 
 std::unordered_map<int32_t, DateFormat> date_cache;
 
-static inline bool wildcmp(const char *w, const char *s, uint8_t wl, uint8_t sl)
+static inline bool wildcmp(const char *w, const char *s, uint8_t wl,
+                           uint8_t sl)
 {
     const char *wp = &w[wl]; // NOLINT
     const char *sp = &s[sl]; // NOLINT
@@ -233,12 +234,12 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
     this->islink = false;
     this->file = file;
     this->git = ' ';
+    this->suffix = ' ';
 
     if (st == nullptr) {
         this->user = colorize("????", settings.color.user.user);
         this->group = colorize("????", settings.color.user.group);
         this->mode = 0;
-        this->suffix = ' ';
         this->isdir = false;
         this->modified = 0;
         this->bsize = 0;
@@ -246,8 +247,6 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
         this->color = findColor(SLK_ORPHAN);
     } else {
         this->color = getColor(file, st->st_mode);
-
-        /* this->suffix = ' '; */
 
         #ifdef USE_GIT
 
@@ -417,8 +416,6 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
         this->mode = st->st_mode;
         this->fullpath = fullpath;
 
-        /* this->user_len = cleanlen(this->user); */
-
         this->isdir = false;
 
         if (S_ISDIR(st->st_mode)) { // NOLINT
@@ -431,8 +428,6 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
                            );
         }
     }
-
-    /* this->file_len = (git + color + file + suffix).length(); */
 
     if (settings.colors) {
         this->file += "\033[0m";
@@ -522,9 +517,9 @@ Segment Entry::format(char c)
 
         case 'U': {
             output.first = user + colorize(
-                settings.symbols.user.separator,
-                settings.color.user.separator
-            ) + group;
+                               settings.symbols.user.separator,
+                               settings.color.user.separator
+                           ) + group;
             break;
         }
 
@@ -572,11 +567,14 @@ Segment Entry::format(char c)
     return output;
 }
 
-void Entry::postprocess() {
-    for (size_t pos = 0; (pos = settings.format.find('@', pos)) != std::string::npos;) {
+void Entry::postprocess()
+{
+    for (size_t pos = 0;
+         (pos = settings.format.find('@', pos)) != std::string::npos;) {
         pos++;
 
         char c = settings.format.at(pos);
+
         if (c == '^') {
             pos++;
             c = settings.format.at(pos);
@@ -794,11 +792,11 @@ char Entry::fileHasAcl()
     #ifdef __linux__
 
     xattr = getxattr(
-        fullpath.c_str(),
-        XATTR_NAME_POSIX_ACL_ACCESS,
-        nullptr,
-        0
-    );
+                fullpath.c_str(),
+                XATTR_NAME_POSIX_ACL_ACCESS,
+                nullptr,
+                0
+            );
 
     if (xattr < 0 && errno == ENODATA) {
         xattr = 0;
@@ -808,11 +806,11 @@ char Entry::fileHasAcl()
 
     if (xattr == 0 && S_ISDIR(mode)) { // NOLINT
         xattr = getxattr(
-            fullpath.c_str(),
-            XATTR_NAME_POSIX_ACL_DEFAULT,
-            nullptr,
-            0
-        );
+                    fullpath.c_str(),
+                    XATTR_NAME_POSIX_ACL_DEFAULT,
+                    nullptr,
+                    0
+                );
 
         if (xattr < 0 && errno == ENODATA) {
             xattr = 0;
@@ -1051,7 +1049,7 @@ DateFormat Entry::relativeTime(int64_t ftime)
     }
 
     rel /= 7;
-    
+
     if (delta < 604800) {
         return toDateFormat("<", DATE_WEEK); // NOLINT
     }
@@ -1059,6 +1057,7 @@ DateFormat Entry::relativeTime(int64_t ftime)
     if (delta < 1814400) {
         return toDateFormat(std::to_string(rel), DATE_WEEK);
     }
+
     rel /= 4;
 
     if (delta < 2419200) {
