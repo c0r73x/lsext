@@ -463,20 +463,36 @@ std::string Entry::colorperms(std::string input)
                 color = settings.color.perm.dir;
                 break;
 
-            case '-':
+            case '-': case '0':
                 color = settings.color.perm.none;
                 break;
 
-            case 'r':
+            case 'r': case '4':
                 color = settings.color.perm.read;
                 break;
 
-            case 'w':
+            case '7':
+                color = settings.color.perm.full;
+                break;
+
+            case '6':
+                color = settings.color.perm.readwrite;
+                break;
+
+            case '5':
+                color = settings.color.perm.readexec;
+                break;
+
+            case '3':
+                color = settings.color.perm.writeexec;
+                break;
+
+            case 'w': case '2':
                 color = settings.color.perm.write;
                 break;
 
             case 'x':
-            case 't':
+            case 't': case '1':
                 color = settings.color.perm.exec;
                 break;
 
@@ -502,6 +518,11 @@ Segment Entry::format(char c)
     switch (c) {
         case 'p': {
             output.first = lsPerms(mode);
+            break;
+        }
+
+        case 'P': {
+            output.first = chmodPerms(mode);
             break;
         }
 
@@ -846,6 +867,15 @@ char Entry::fileHasAcl()
     #endif
 
     return ' ';
+}
+
+std::string Entry::chmodPerms(uint32_t mode)
+{
+    std::string sbits = std::to_string((mode >> 6) & 7) +
+        std::to_string((mode >> 3) & 7) +
+        std::to_string(mode & 7);
+
+    return colorperms(sbits);
 }
 
 std::string Entry::lsPerms(uint32_t mode)

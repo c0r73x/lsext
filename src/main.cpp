@@ -525,10 +525,20 @@ void loadconfig()
     settings.color.perm.read.fg = iniparser_getint(ini, "colors:perm_read_fg", 3);
     settings.color.perm.write.fg = iniparser_getint(ini, "colors:perm_write_fg", 1);
 
+    settings.color.perm.full.fg = iniparser_getint(ini, "colors:perm_full_fg", 15);
+    settings.color.perm.readwrite.fg = iniparser_getint(ini, "colors:perm_readwrite_fg", 11);
+    settings.color.perm.readexec.fg = iniparser_getint(ini, "colors:perm_readexec_fg", 6);
+    settings.color.perm.writeexec.fg = iniparser_getint(ini, "colors:perm_writeexec_fg", 5);
+
     settings.color.perm.none.bg = iniparser_getint(ini, "colors:perm_none_bg", -1);
     settings.color.perm.exec.bg = iniparser_getint(ini, "colors:perm_exec_bg", -1);
     settings.color.perm.read.bg = iniparser_getint(ini, "colors:perm_read_bg", -1);
     settings.color.perm.write.bg = iniparser_getint(ini, "colors:perm_write_bg", -1);
+
+    settings.color.perm.full.bg = iniparser_getint(ini, "colors:perm_full_bg", -1);
+    settings.color.perm.readwrite.bg = iniparser_getint(ini, "colors:perm_readwrite_bg", -1);
+    settings.color.perm.readexec.bg = iniparser_getint(ini, "colors:perm_readexec_bg", -1);
+    settings.color.perm.writeexec.bg = iniparser_getint(ini, "colors:perm_writeexec_bg", -1);
 
     settings.color.perm.dir.fg = iniparser_getint(ini, "colors:perm_dir_fg", 4);
     settings.color.perm.link.fg = iniparser_getint(ini, "colors:perm_link_fg", 6);

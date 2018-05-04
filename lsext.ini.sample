@@ -40,6 +40,11 @@ perm_exec_fg = 2
 perm_read_fg = 3
 perm_write_fg = 1
 
+perm_full_fg = 15
+perm_readwrite_fg = 11
+perm_readexec_fg = 6
+perm_writeexec_fg = 5
+
 perm_dir_fg = 4
 perm_link_fg = 6
 perm_sticky_fg = 5

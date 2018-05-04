@@ -119,6 +119,11 @@ struct settings_t { // NOLINT
             color_t write;
             color_t exec;
 
+            color_t full;
+            color_t readwrite;
+            color_t readexec;
+            color_t writeexec;
+
             color_t dir;
             color_t link;
             color_t sticky;
@@ -286,6 +291,7 @@ private:
     std::string findColor(const char *file);
     std::string getColor(const char *file, uint32_t mode);
     std::string lsPerms(uint32_t mode);
+    std::string chmodPerms(uint32_t mode);
 
     char fileHasAcl();
 
