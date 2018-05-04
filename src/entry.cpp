@@ -691,7 +691,7 @@ std::string Entry::findColor(const char *file)
             }
         );
 
-        if (c != colors.end()) {
+        if (c != colors.end() && c->second != "target") {
             return "\033[" + c->second + "m";
         }
 
