@@ -14,7 +14,6 @@
 
 extern "C" {
     #include <dirent.h>
-    #include <glob.h>
     #include <libgen.h>
     #include <pwd.h>
     #include <sys/ioctl.h>
@@ -54,6 +53,13 @@ static inline bool exists(const char *name)
     return (stat(name, &buffer) == 0);
 }
 
+static inline void rtrim(std::string &s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
+
 void initcolors()
 {
     const char *ls_colors = std::getenv("LS_COLORS");
@@ -69,7 +75,12 @@ void initcolors()
     }
 
     /* for (auto c : colors) { */
-    /*     printf("\033[%sm%s\033[0m\n", c.color.c_str(), c.glob.c_str()); */
+    /*     printf( */
+    /*         "\033[%sm\\033[%sm%s\033[0m\n", */
+    /*         c.second.c_str(), */
+    /*         c.second.c_str(), */
+    /*         c.first.c_str() */
+    /*     ); */
     /* } */
 }
 
@@ -295,35 +306,31 @@ Entry *addfile(const char *fpath, const char *file)
 FileList listdir(const char *path, const std::string &fp, bool hidden)
 {
     FileList lst;
-    glob_t res;
+    DIR* dir;
 
-    std::string pattern = std::string(path) + fp; // NOLINT
-    glob(pattern.c_str(), GLOB_NOSORT, nullptr, &res); // NOLINT
+    if ((dir = opendir(path)) != nullptr) {
+        dirent * ent;
 
-    uint32_t count = res.gl_pathc;
+        while ((ent = readdir((dir))) != nullptr) {
+            if (
+                strcmp(ent->d_name, ".") == 0 ||
+                strcmp(ent->d_name, "..") == 0
+            ) {
+                continue;
+            }
 
-    #pragma omp parallel for shared(lst, count)
-    for (uint32_t i = 0; i < count; i++) { // NOLINT
-        const char *file = basename(res.gl_pathv[i]); // NOLINT
+            if (ent->d_name[0] == '.' && !settings.show_hidden) {
+                continue;
+            }
 
-        if (file[0] == '.' && (file[1] == 0 || file[1] == '.')) { // NOLINT
-            continue;
+            auto f = addfile(path, &ent->d_name[0]);
+
+            if (f != nullptr) {
+                lst.push_back(f);
+            }
         }
 
-        auto f = addfile(path, file);
-
-        if (f != nullptr) {
-            #pragma omp critical
-            lst.push_back(f);
-        }
-    }
-
-    globfree(&res);
-
-    if (settings.show_hidden && !hidden) {
-        FileList dotfiles = listdir(path, "/.*", true); // NOLINT
-        lst.reserve(lst.size() + dotfiles.size());
-        lst.insert(lst.end(), dotfiles.begin(), dotfiles.end());
+        closedir(dir);
     }
 
     return lst;
@@ -365,42 +372,34 @@ void printdir(FileList *lst)
         return cmp > 0;
     });
 
-    if (settings.list) {
-        size_t max_user = 0;
-        size_t max_date = 0;
-        size_t max_date_unit = 0;
-        size_t max_size = 0;
-        size_t max_len = 0;
+    Lengths maxlen;
 
-        for (const auto l : *lst) {
-            max_user = std::max(l->user_len, max_user);
-            max_date = std::max(l->date_len,  max_date);
-            max_date_unit = std::max(l->date_unit_len, max_date_unit);
-            max_size = std::max(l->size_len, max_size);
-            max_len = std::max(l->clean_len, max_len);
+    for (const auto l : *lst) {
+        for (const auto f : l->processed) {
+            maxlen[f.first] = std::max(f.second.second, maxlen[f.first]);
         }
+    }
 
+    if (settings.list) {
         for (const auto l : *lst) {
-            l->list(max_user, max_date, max_date_unit, max_size, max_len);
+            std::string output = l->print(maxlen);
+            rtrim(output);
+
+            printf("%s\033[0m\n", output.c_str());
         }
     } else {
         struct winsize w = { 0 };
         ioctl(STDOUT_FILENO, TIOCGWINSZ, &w); // NOLINT
 
-        size_t max_len = 0;
-
-        for (const auto l : *lst) {
-            max_len = std::max(l->clean_len, max_len);
-        }
-
-        max_len += 1;
+        maxlen['F'] += 1;
         int columns = 0;
 
         if (settings.forced_columns > 0) {
             columns = settings.forced_columns;
         } else {
             int calc = (
-                static_cast<float>(w.ws_col) / static_cast<float>(max_len)
+                static_cast<float>(w.ws_col) /
+                static_cast<float>(maxlen['F'])
             );
             columns = std::max(calc, 1);
         }
@@ -408,7 +407,7 @@ void printdir(FileList *lst)
         int current = 0;
 
         for (const auto l : *lst) {
-            l->print(max_len);
+            printf("%s", l->print(maxlen).c_str());
             current++;
 
             if (current == columns)  {
@@ -478,7 +477,7 @@ void loadconfig()
 
     settings.forced_columns = 0;
 
-    settings.format = cpp11_getstring(ini, "symbols:format", " @p    @u   @d  @s  @f");
+    settings.format = cpp11_getstring(ini, "symbols:format", " @p    @U  @^r @t  @^s  @f");
     // NOLINTNEXTLINE
     settings.size_number_color = iniparser_getboolean(ini, "settings:size_number_color", true);
     // NOLINTNEXTLINE
@@ -762,6 +761,10 @@ int main(int argc, const char *argv[])
                 parse = false;
                 break;
         }
+    }
+
+    if (!settings.list) {
+        settings.format = "@F";
     }
 
     #ifdef USE_GIT

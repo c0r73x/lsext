@@ -42,6 +42,10 @@ extern "C" {
 
 using DateFormat = std::pair<std::string, std::string>;
 
+using Segment = std::pair<std::string, int>;
+using OutputFormat = std::unordered_map<char, Segment>;
+using Lengths = std::unordered_map<char, int>;
+
 enum sort_t {
     SORT_ALPHA,
     SORT_MODIFIED,
@@ -251,48 +255,41 @@ public:
 
     int64_t modified;
     int64_t bsize;
+    uint32_t mode;
 
-    size_t user_len;
+    std::string print(Lengths maxlen);
 
-    size_t date_len;
-    size_t date_unit_len;
-
-    size_t size_len;
-    size_t file_len;
-    size_t clean_len;
-
-    void list(int max_user, int max_date, int max_date_unit, int max_size,
-              int max_flen);
-    void print(int max_len);
-
-    std::string suffix;
-    std::string color;
+    OutputFormat processed;
 private:
-    std::string git;
-    std::string prefix;
-    std::string perms;
+    std::string fullpath;
+
     std::string user;
-    DateFormat date;
-    std::string size;
+    std::string group;
+    std::string git;
     std::string target;
+    std::string suffix;
+
+    std::string color;
     std::string target_color;
 
     static char fileTypeLetter(uint32_t mode);
     static DateFormat timeAgo(int64_t ftime);
     static DateFormat toDateFormat(const std::string &num, int unit);
-    static std::string colorize(std::string input, color_t color, bool ending);
-    static std::string lsPerms(uint32_t mode);
+    static DateFormat relativeTime(int64_t ftime);
+    static std::string colorize(std::string input, color_t color);
+    static std::string colorperms(std::string input);
     static uint32_t cleanlen(std::string input);
-    std::string print_format(const char c, int max_user, int max_date,
-                             int max_date_unit, int max_size, int max_flen);
+    Segment format(char c);
 
     std::string isMountpoint(char* fullpath, struct stat *st);
     std::string unitConv(float size);
     std::string findColor(const char *file);
     std::string getColor(const char *file, uint32_t mode);
-    std::string colorperms(std::string input);
+    std::string lsPerms(uint32_t mode);
 
-    char fileHasAcl(char const *name, struct stat const *sb);
+    char fileHasAcl();
+
+    void postprocess();
 };
 
 #endif // ENTRY_HPP_

@@ -47,12 +47,7 @@ std::unordered_map<std::string, std::string> colors;
 std::unordered_map<uint8_t, std::string> uid_cache;
 std::unordered_map<uint8_t, std::string> gid_cache;
 
-static inline void rtrim(std::string &s)
-{
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
-}
+std::unordered_map<int32_t, DateFormat> date_cache;
 
 static inline bool wildcmp(const char *w, const char *s, uint8_t wl, uint8_t sl)
 {
@@ -67,9 +62,9 @@ loopStart:
         switch (*wp) {
             case '*':
                 star = true;
-                s = &sp[sl], wp = &w[wl]; // NOLINT
+                sp = &s[sl], wp = &w[wl]; // NOLINT
 
-                if (*--w == 0) { // NOLINT
+                if (*--wp == 0) { // NOLINT
                     return true;
                 }
 
@@ -96,11 +91,11 @@ starCheck:
         return false;
     }
 
-    s--; // NOLINT
+    sp--; // NOLINT
     goto loopStart;
 }
 
-std::string Entry::colorize(std::string input, color_t color, bool ending)
+std::string Entry::colorize(std::string input, color_t color)
 {
     if (settings.colors) {
         std::string output;
@@ -119,7 +114,7 @@ std::string Entry::colorize(std::string input, color_t color, bool ending)
 
         output += input;
 
-        if (ending) {
+        if (color.bg >= 0 && color.fg >= 0) {
             output += "\033[0m";
         }
 
@@ -185,8 +180,7 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
 
                             return colorize(
                                        settings.symbols.suffix.mountpoint,
-                                       settings.color.suffix.mountpoint,
-                                       true
+                                       settings.color.suffix.mountpoint
                                    );
                         }
                     }
@@ -216,8 +210,7 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
 
                             return colorize(
                                        settings.symbols.suffix.mountpoint,
-                                       settings.color.suffix.mountpoint,
-                                       true
+                                       settings.color.suffix.mountpoint
                                    );
                         }
                     }
@@ -230,8 +223,7 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
 
     return colorize(
                settings.symbols.suffix.dir,
-               settings.color.suffix.dir,
-               true
+               settings.color.suffix.dir
            );
 }
 
@@ -239,34 +231,23 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
              uint32_t flags)
 {
     this->islink = false;
-    this->color = "";
+    this->file = file;
     this->git = ' ';
 
     if (st == nullptr) {
-        this->user = '?';
-        this->date = DateFormat("?", "?");
-        this->size = '?';
-        this->perms = "l?????????";
-        this->file = file;
-        this->user_len = 1;
-        this->date_len = 1;
-        this->date_unit_len = 1;
-        this->size_len = 1;
+        this->user = colorize("????", settings.color.user.user);
+        this->group = colorize("????", settings.color.user.group);
+        this->mode = 0;
         this->suffix = ' ';
-        this->prefix = ' ';
         this->isdir = false;
         this->modified = 0;
         this->bsize = 0;
 
-        if (settings.colors) {
-            this->color = findColor(SLK_ORPHAN);
-        }
+        this->color = findColor(SLK_ORPHAN);
     } else {
-        if (settings.colors) {
-            this->color = getColor(file, st->st_mode);
-        }
+        this->color = getColor(file, st->st_mode);
 
-        this->suffix = ' ';
+        /* this->suffix = ' '; */
 
         #ifdef USE_GIT
 
@@ -288,9 +269,9 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
                     }
 
                     if (settings.override_git_repo_color) {
-                        this->color = colorize(symbol, color, false);
+                        this->color = colorize(symbol, color);
                     } else {
-                        this->git = colorize(symbol, color, true);
+                        this->git = colorize(symbol, color);
                     }
                 } else {
                     if ((flags & GIT_DIR_DIRTY) != 0) {
@@ -310,9 +291,9 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
                     }
 
                     if (settings.override_git_dir_color) {
-                        this->color = colorize(symbol, color, false);
+                        this->color = colorize(symbol + file, color);
                     } else {
-                        this->git = colorize(symbol, color, true);
+                        this->git = colorize(symbol, color);
                     }
                 }
             } else {
@@ -347,7 +328,7 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
                     symbol = settings.symbols.git.unchanged;
                 }
 
-                this->git = colorize(symbol, color, true);
+                this->git = colorize(symbol, color);
             }
         }
 
@@ -364,8 +345,7 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
                 if (settings.list) {
                     this->suffix = colorize(
                                        settings.symbols.suffix.link,
-                                       settings.color.suffix.link,
-                                       true
+                                       settings.color.suffix.link
                                    );
                 }
 
@@ -382,7 +362,8 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
                 struct stat tst = {0};
 
                 if ((lstat(fpath.c_str(), &tst)) < 0) {
-                    this->target_color = this->color;
+                    this->color = findColor(SLK_ORPHAN);
+                    this->target_color = findColor(SLK_MISSING);
                 } else {
                     this->color = getColor(file, tst.st_mode);
                     this->target_color = getColor(&target[0], tst.st_mode);
@@ -396,8 +377,6 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
 
         auto cuid = uid_cache.find(st->st_uid);
         auto cgid = gid_cache.find(st->st_gid);
-        std::string user;
-        std::string group;
 
         if (cuid == uid_cache.end()) {
             struct passwd pw = { nullptr };
@@ -405,15 +384,15 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
 
             if (getpwuid_r(st->st_uid, &pw, &buf[0], sizeof(buf), &pwp) != 0) {
                 // NOLINTNEXTLINE
-                user = colorize("????", settings.color.user.user, true);
+                this->user = colorize("????", settings.color.user.user);
             } else {
                 // NOLINTNEXTLINE
-                user = colorize(pw.pw_name, settings.color.user.user, true);
+                this->user = colorize(pw.pw_name, settings.color.user.user);
             }
 
-            uid_cache[st->st_uid] = user;
+            uid_cache[st->st_uid] = this->user;
         } else {
-            user = cuid->second;
+            this->user = cuid->second;
         }
 
         if (cgid == gid_cache.end()) {
@@ -422,38 +401,24 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
 
             if (getgrgid_r(st->st_gid, &gr, &buf[0], sizeof(buf), &grp) != 0) {
                 // NOLINTNEXTLINE
-                group = colorize("????", settings.color.user.group, true);
+                this->group = colorize("????", settings.color.user.group);
             } else {
                 // NOLINTNEXTLINE
-                group = colorize(gr.gr_name, settings.color.user.group, true);
+                this->group = colorize(gr.gr_name, settings.color.user.group);
             }
 
-            gid_cache[st->st_gid] = group;
+            gid_cache[st->st_gid] = this->group;
         } else {
-            group += cgid->second;
+            this->group = cgid->second;
         }
-
-        this->user = user + colorize(
-                         settings.symbols.user.separator,
-                         settings.color.user.separator,
-                         true
-                     ) + group;
-
-        this->date = timeAgo(st->st_ctime);
-        this->size = unitConv(st->st_size);
-        this->perms = lsPerms(st->st_mode);
 
         this->modified = st->st_ctime;
         this->bsize = st->st_size;
+        this->mode = st->st_mode;
+        this->fullpath = fullpath;
 
-        this->file = file;
+        /* this->user_len = cleanlen(this->user); */
 
-        this->user_len = cleanlen(this->user);
-        this->date_len = cleanlen(this->date.first);
-        this->date_unit_len = cleanlen(this->date.second);
-        this->size_len = cleanlen(this->size);
-
-        this->prefix = fileHasAcl(fullpath, st);
         this->isdir = false;
 
         if (S_ISDIR(st->st_mode)) { // NOLINT
@@ -462,27 +427,18 @@ Entry::Entry(const char *file, char *fullpath, struct stat *st,
         } else if ((st->st_mode & S_IEXEC) != 0 && !islink) { // NOLINT
             this->suffix = colorize(
                                settings.symbols.suffix.exec,
-                               settings.color.suffix.exec,
-                               true
+                               settings.color.suffix.exec
                            );
         }
     }
 
-    this->file_len = (git + color + file + suffix).length();
+    /* this->file_len = (git + color + file + suffix).length(); */
 
     if (settings.colors) {
         this->file += "\033[0m";
-        this->perms = colorperms(this->perms);
-
-        this->clean_len = cleanlen(
-                              this->git +
-                              this->color +
-                              this->file +
-                              this->suffix
-                          );
-    } else {
-        this->clean_len = this->file_len;
     }
+
+    postprocess();
 }
 
 std::string Entry::colorperms(std::string input)
@@ -538,111 +494,175 @@ std::string Entry::colorperms(std::string input)
                 break;
         }
 
-        output += colorize(std::string(&c, 1), color, true); // NOLINT
+        output += colorize(std::string(&c, 1), color); // NOLINT
     }
 
     return output;
 }
 
-std::string Entry::print_format(const char c, int max_user, int max_date,
-                                int max_date_unit, int max_size, int max_flen)
+Segment Entry::format(char c)
 {
-    switch (c) {
-        case 'p':
-            return perms + prefix;
+    Segment output;
 
-        case 'u': {
-            return user + std::string(max_user - user_len, ' ');
+    switch (c) {
+        case 'p': {
+            output.first = lsPerms(mode);
+            break;
         }
 
-        case 'd': {
-            return date.first + std::string(max_date - date_len, ' ') +
-                   " " + date.second + std::string(max_date_unit - date_unit_len, ' ');
+        case 'u': {
+            output.first = user;
+            break;
+        }
+
+        case 'g': {
+            output.first = group;
+            break;
+        }
+
+        case 'U': {
+            output.first = user + colorize(
+                settings.symbols.user.separator,
+                settings.color.user.separator
+            ) + group;
+            break;
+        }
+
+        case 'r': {
+            output.first = timeAgo(modified).first;
+            break;
+        }
+
+        case 't': {
+            output.first = timeAgo(modified).second;
+            break;
         }
 
         case 's': {
-            return std::string(max_size - size_len, ' ') + size;
+            output.first = unitConv(bsize);
+            break;
         }
 
         case 'f': {
-            return
-                #ifdef USE_GIT
-                git +
-                #else
-                "" +
-                #endif
-                color + file + suffix + target_color + target +
-                std::string(max_flen - clean_len, ' ');
+            #ifdef USE_GIT
+            output.first = git;
+            #else
+            output.first = "";
+            #endif
+            output.first += color + file + suffix + target_color + target;
+            break;
+        }
+
+        case 'F': {
+            #ifdef USE_GIT
+            output.first = git;
+            #else
+            output.first = "";
+            #endif
+            output.first += color + file + suffix;
+            break;
+        }
+
+        default: {
+            output.first = std::string(1, c);
         }
     }
 
-    return std::string(1, c);
+    output.second = cleanlen(output.first);
+    return output;
 }
 
-void Entry::list(int max_user, int max_date, int max_date_unit,
-                 int max_size, int max_flen)
-{
+void Entry::postprocess() {
+    for (size_t pos = 0; (pos = settings.format.find('@', pos)) != std::string::npos;) {
+        pos++;
 
+        char c = settings.format.at(pos);
+        if (c == '^') {
+            pos++;
+            c = settings.format.at(pos);
+        }
+
+        if (c != '@') {
+            auto f = processed.find(c);
+
+            if (f == processed.end()) {
+                processed[c] = format(c);
+            }
+        }
+    }
+}
+
+std::string Entry::print(Lengths maxlen)
+{
     std::string output;
 
     // NOLINTNEXTLINE
     for (auto c = settings.format.begin(); c != settings.format.end(); c++) {
         switch (*c) {
-            case '@':
+            case '@': {
                 c++;
-                output += print_format(
-                              *c,
-                              max_user,
-                              max_date,
-                              max_date_unit,
-                              max_size,
-                              max_flen
-                          );
+
+                if (*c == '^') {
+                    c++;
+
+                    auto s = processed[*c];
+                    auto m = maxlen[*c];
+
+                    output += std::string(m - s.second, ' ');
+                    output += s.first;
+                } else {
+                    auto s = processed[*c];
+                    auto m = maxlen[*c];
+
+                    output += s.first;
+                    output += std::string(m - s.second, ' ');
+                }
+
                 break;
+            }
 
             default:
                 output += *c;
         }
     }
 
-    rtrim(output);
-    printf("%s\033[0m\n", output.c_str()); // NOLINT
-}
-
-void Entry::print(int max_len)
-{
-
-    // NOLINTNEXTLINE
-    printf(
-        "%s",
-        (git + color + file+ suffix + std::string(max_len - clean_len, ' ')).c_str()
-    );
+    return output;
 }
 
 std::string Entry::findColor(const char *file)
 {
-    auto c = std::find_if(colors.begin(), colors.end(),
-    [file](const std::pair<std::string, std::string> &t) -> bool {
-        return wildcmp(
-            t.first.c_str(),
-            file,
-            t.first.length() - 1,
-            strlen(file) - 1
+    if (settings.colors) {
+        auto c = colors.find(file);
+
+        if (c != colors.end() && c->second != "target") {
+            return "\033[" + c->second + "m";
+        }
+
+        c = std::find_if(colors.begin(), colors.end(),
+            [file](const std::pair<std::string, std::string> &t) -> bool {
+                return wildcmp(
+                    t.first.c_str(),
+                    file,
+                    t.first.length() - 1,
+                    strlen(file) - 1
+                );
+            }
         );
+
+        if (c != colors.end()) {
+            return "\033[" + c->second + "m";
+        }
+
+        c = colors.find("fi"); // NOLINT
+
+        if (c != colors.end()) {
+            return "\033[" + c->second + "m";
+        }
+
+        return "\033[0m"; // NOLINT
     }
-                         );
 
-    if (c != colors.end() && c->second != "target") {
-        return "\033[" + c->second + "m";
-    }
-
-    c = colors.find("fi"); // NOLINT
-
-    if (c != colors.end()) {
-        return "\033[" + c->second + "m";
-    }
-
-    return "\033[0m"; // NOLINT
+    return "";
 }
 
 std::string Entry::getColor(const char *file, uint32_t mode)
@@ -759,13 +779,13 @@ char Entry::fileTypeLetter(uint32_t mode)
     return '?';
 }
 
-char Entry::fileHasAcl(char const *name, struct stat const *sb)
+char Entry::fileHasAcl()
 {
     ssize_t  xattr;
 
     #ifdef S_ISLNK
 
-    if (S_ISLNK(sb->st_mode)) { // NOLINT
+    if (S_ISLNK(mode)) { // NOLINT
         return ' ';
     }
 
@@ -773,7 +793,12 @@ char Entry::fileHasAcl(char const *name, struct stat const *sb)
 
     #ifdef __linux__
 
-    xattr = getxattr(name, XATTR_NAME_POSIX_ACL_ACCESS, nullptr, 0);
+    xattr = getxattr(
+        fullpath.c_str(),
+        XATTR_NAME_POSIX_ACL_ACCESS,
+        nullptr,
+        0
+    );
 
     if (xattr < 0 && errno == ENODATA) {
         xattr = 0;
@@ -781,8 +806,13 @@ char Entry::fileHasAcl(char const *name, struct stat const *sb)
         return '+';
     }
 
-    if (xattr == 0 && S_ISDIR(sb->st_mode)) { // NOLINT
-        xattr = getxattr(name, XATTR_NAME_POSIX_ACL_DEFAULT, nullptr, 0);
+    if (xattr == 0 && S_ISDIR(mode)) { // NOLINT
+        xattr = getxattr(
+            fullpath.c_str(),
+            XATTR_NAME_POSIX_ACL_DEFAULT,
+            nullptr,
+            0
+        );
 
         if (xattr < 0 && errno == ENODATA) {
             xattr = 0;
@@ -794,14 +824,14 @@ char Entry::fileHasAcl(char const *name, struct stat const *sb)
     #elif __APPLE__
 
     acl_entry_t dummy;
-    acl_t acl = acl_get_link_np(name, ACL_TYPE_EXTENDED);
+    acl_t acl = acl_get_link_np(fullpath.c_str(), ACL_TYPE_EXTENDED);
 
     if (acl && acl_get_entry(acl, ACL_FIRST_ENTRY, &dummy) == -1) {
         acl_free(acl);
         acl = nullptr;
     }
 
-    xattr = listxattr(name, NULL, 0, XATTR_NOFOLLOW);
+    xattr = listxattr(fullpath.c_str(), NULL, 0, XATTR_NOFOLLOW);
 
     if (xattr < 0) {
         xattr = 0;
@@ -856,7 +886,7 @@ std::string Entry::lsPerms(uint32_t mode)
 
     bits[10] = '\0';
     sbits = &bits[0];
-    return sbits;
+    return colorperms(sbits + fileHasAcl());
 }
 
 std::string Entry::unitConv(float size)
@@ -904,8 +934,8 @@ std::string Entry::unitConv(float size)
                 snprintf(&csize[0], sizeof(csize), "%.1f", size);
             }
 
-            unit = colorize(&csize[0], c_unit, true) + // NOLINT
-                   colorize(gsl::at(units, i), c_symbol, true); // NOLINT
+            unit = colorize(&csize[0], c_unit) + // NOLINT
+                   colorize(gsl::at(units, i), c_symbol); // NOLINT
 
             return unit;
         }
@@ -951,18 +981,36 @@ DateFormat Entry::toDateFormat(const std::string &num, int unit)
     }
 
     return DateFormat(
-               colorize(num, c_unit, true),
-               colorize(gsl::at(units, unit), c_symbol, true) // NOLINT
+               colorize(num, c_unit),
+               colorize(gsl::at(units, unit), c_symbol) // NOLINT
            );
 }
 
 DateFormat Entry::timeAgo(int64_t ftime)
+{
+    auto date = date_cache.find(ftime);
+
+    if (date != date_cache.end()) {
+        return date->second;
+    }
+
+    DateFormat output = relativeTime(ftime);
+    date_cache[ftime] = output;
+
+    return output;
+}
+
+DateFormat Entry::relativeTime(int64_t ftime)
 {
     time_t utime;
     time(&utime);
 
     int64_t delta = utime - ftime;
     int64_t rel = delta;
+
+    if (ftime == 0) {
+        return DateFormat("?", "?"); // NOLINT
+    }
 
     if (delta < 10) {
         return toDateFormat("<", DATE_SEC); // NOLINT
