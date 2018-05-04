@@ -802,6 +802,26 @@ int main(int argc, const char *argv[])
                 // NOLINTNEXTLINE
                 fprintf(stderr, "Unable to open %s!\n", sp.at(i));
             } else {
+                #ifdef S_ISLNK
+                char target[PATH_MAX] = {};
+                std::string lpath;
+
+                char fullpath[PATH_MAX] = {0};
+
+                // NOLINTNEXTLINE
+                snprintf(fullpath, PATH_MAX, "%s", sp.at(i));
+
+                if ((readlink(sp.at(i), &target[0], sizeof(target))) >= 0) {
+                    lpath = &target[0];
+                    if (lpath.at(0) != '/') {
+                        // NOLINTNEXTLINE
+                        lpath = std::string(dirname(&fullpath[0])) + "/" + lpath;
+                    }
+
+                    lstat(lpath.c_str(), &st);
+                }
+                #endif
+
                 if (S_ISDIR(st.st_mode)) { // NOLINT
                     dirs.insert(DirList::value_type(
                         sp.at(i),
