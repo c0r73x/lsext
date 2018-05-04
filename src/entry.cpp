@@ -521,7 +521,7 @@ std::string Entry::colorperms(std::string input)
     return output;
 }
 
-Segment Entry::format(char c, std::string params)
+Segment Entry::format(char c)
 {
     Segment output;
 
@@ -604,6 +604,10 @@ Segment Entry::format(char c, std::string params)
         }
     }
 
+    if (settings.colors) {
+        output.first += "\033[0m";
+    }
+
     output.second = cleanlen(output.first);
     return output;
 }
@@ -611,7 +615,6 @@ Segment Entry::format(char c, std::string params)
 void Entry::postprocess()
 {
     for (size_t pos = 0; (pos = settings.format.find('@', pos)) != std::string::npos;) {
-        std::string params;
         pos++;
 
         char c = settings.format.at(pos);
@@ -625,7 +628,7 @@ void Entry::postprocess()
             auto f = processed.find(c);
 
             if (f == processed.end()) {
-                processed[c] = format(c, params);
+                processed[c] = format(c);
             }
         }
     }

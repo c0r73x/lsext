@@ -284,7 +284,7 @@ private:
     static std::string colorize(std::string input, color_t color);
     static std::string colorperms(std::string input);
     static uint32_t cleanlen(std::string input);
-    Segment format(char c, std::string params);
+    Segment format(char c);
 
     std::string isMountpoint(char* fullpath, struct stat *st);
     std::string unitConv(float size);
