@@ -1044,10 +1044,12 @@ DateFormat Entry::isoTime(int64_t ftime)
         settings.color.date.year
     );
 
-    output.second = colorize(
-        fmt("%02d:%02d", tm->tm_hour, tm->tm_min),
-        settings.color.date.hour
-    );
+    auto color = settings.color.date.number;
+    if (!settings.date_number_color) {
+        color = settings.color.date.year;
+    }
+
+    output.second = colorize(fmt("%02d:%02d", tm->tm_hour, tm->tm_min), color);
 
     return output;
 }
