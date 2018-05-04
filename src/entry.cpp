@@ -1040,22 +1040,13 @@ DateFormat Entry::isoTime(int64_t ftime)
     auto tm = std::localtime(&ftime);
 
     output.first = colorize(
-        std::to_string(tm->tm_year + 1900),
+        fmt("%d-%02d-%02d", tm->tm_year + 1900, tm->tm_mon, tm->tm_mday),
         settings.color.date.year
-    ) + "-" + colorize(
-        fmt("%02d", tm->tm_mon),
-        settings.color.date.mon
-    ) + "-" + colorize(
-        fmt("%02d", tm->tm_mday),
-        settings.color.date.day
     );
 
     output.second = colorize(
-        fmt("%02d", tm->tm_hour),
+        fmt("%02d:%02d", tm->tm_hour, tm->tm_min),
         settings.color.date.hour
-    ) + ":" + colorize(
-        fmt("%02d", tm->tm_min),
-        settings.color.date.min
     );
 
     return output;
