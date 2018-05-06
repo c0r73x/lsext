@@ -569,7 +569,7 @@ void Entry::postprocess()
         }
 
         if (c != '@') {
-            totlen -= 1;
+            totlen -= 2;
             auto f = processed.find(c);
 
             if (f == processed.end()) {
