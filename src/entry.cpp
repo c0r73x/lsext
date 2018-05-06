@@ -48,64 +48,6 @@ std::unordered_map<std::string, std::string> colors;
 std::unordered_map<uint8_t, std::string> uid_cache;
 std::unordered_map<uint8_t, std::string> gid_cache;
 
-static inline bool wildcmp(const char *w, const char *s, uint8_t wl,
-                           uint8_t sl)
-{
-    const char *wp = &w[wl]; // NOLINT
-    const char *sp = &s[sl]; // NOLINT
-
-    bool star = false;
-
-loopStart:
-
-    for (; *sp; --sp, --wp, --wl, --sl) { // NOLINT
-        switch (*wp) {
-            case '*':
-                star = true;
-                sp = &s[sl], wp = &w[wl]; // NOLINT
-
-                if (*--wp == 0) { // NOLINT
-                    return true;
-                }
-
-                goto loopStart;
-
-            default:
-                if (*sp != *wp) {
-                    goto starCheck;
-                }
-
-                break;
-        }
-    }
-
-    if (*wp == '*') {
-        --wp; // NOLINT
-    }
-
-    return (*wp == 0);
-
-starCheck:
-
-    if (!star) {
-        return false;
-    }
-
-    sp--; // NOLINT
-    goto loopStart;
-}
-
-template<typename... Args>
-inline std::string fmt(const char* fmt, Args... args)
-{
-    size_t size = snprintf(nullptr, 0, fmt, args...);
-    std::string buf;
-    buf.reserve(size + 1);
-    buf.resize(size);
-    snprintf(&buf[0], size + 1, fmt, args...);
-    return buf;
-}
-
 std::string Entry::colorize(std::string input, color_t color)
 {
     if (settings.colors) {
@@ -579,22 +521,21 @@ Segment Entry::format(char c)
             break;
         }
 
-        case 'f': {
+        case 'G': {
             #ifdef USE_GIT
-            output.first = git;
+                output.first = git;
             #else
-            output.first = "";
+                output.first = "";
             #endif
+            break;
+        }
+
+        case 'f': {
             output.first += color + file + suffix + target_color + target;
             break;
         }
 
         case 'F': {
-            #ifdef USE_GIT
-            output.first = git;
-            #else
-            output.first = "";
-            #endif
             output.first += color + file + suffix;
             break;
         }
@@ -614,6 +555,8 @@ Segment Entry::format(char c)
 
 void Entry::postprocess()
 {
+    totlen = settings.format.length();
+
     for (size_t pos = 0; (pos = settings.format.find('@', pos)) != std::string::npos;) {
         pos++;
 
@@ -622,19 +565,22 @@ void Entry::postprocess()
         if (c == '^') {
             pos++;
             c = settings.format.at(pos);
+            totlen -= 1;
         }
 
         if (c != '@') {
+            totlen -= 1;
             auto f = processed.find(c);
 
             if (f == processed.end()) {
                 processed[c] = format(c);
+                totlen += processed[c].second;
             }
         }
     }
 }
 
-std::string Entry::print(Lengths maxlen)
+std::string Entry::print(Lengths maxlens, int *outlen)
 {
     std::string output;
 
@@ -648,13 +594,15 @@ std::string Entry::print(Lengths maxlen)
                     c++;
 
                     auto s = processed[*c];
-                    auto m = maxlen[*c];
+                    auto m = maxlens[*c];
+                    *outlen += m;
 
                     output += std::string(m - s.second, ' ');
                     output += s.first;
                 } else {
                     auto s = processed[*c];
-                    auto m = maxlen[*c];
+                    auto m = maxlens[*c];
+                    *outlen += m;
 
                     output += s.first;
                     output += std::string(m - s.second, ' ');
@@ -665,6 +613,7 @@ std::string Entry::print(Lengths maxlen)
 
             default:
                 output += *c;
+                *outlen += 1;
         }
     }
 

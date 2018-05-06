@@ -1,22 +1,13 @@
-#include <algorithm>
-#include <climits>
-#include <cstdlib>
-#include <cstring>
-#include <map>
-#include <sstream>
-#include <vector>
-
 #include <re2/re2.h>
 
-#include "gsl-lite.h"
 #include "entry.hpp"
+#include "gsl-lite.h"
 
 extern "C" {
     #include <dirent.h>
     #include <libgen.h>
     #include <pwd.h>
     #include <sys/ioctl.h>
-    #include <sys/stat.h>
     #include <unistd.h>
 
     #ifdef USE_OPENMP
@@ -30,8 +21,6 @@ extern "C" {
     #ifdef USE_GIT
         #include <git2.h>
     #endif
-
-    #include <iniparser.h>
 }
 
 using FileList = std::vector<Entry *>;
@@ -40,24 +29,6 @@ using DirList = std::unordered_map<std::string, FileList>;
 static re2::RE2 git_re("/\\.git/?$");
 
 settings_t settings = {0}; // NOLINT
-
-static inline const char *cpp11_getstring(dictionary *d, const char *key, const char *def)
-{
-    return iniparser_getstring(d, key, const_cast<char *>(def)); // NOLINT
-}
-
-static inline bool exists(const char *name)
-{
-    struct stat buffer = { 0 };
-    return (stat(name, &buffer) == 0);
-}
-
-static inline void rtrim(std::string &s)
-{
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
-}
 
 void initcolors()
 {
@@ -371,53 +342,57 @@ void printdir(FileList *lst)
         return cmp > 0;
     });
 
-    Lengths maxlen;
+    int maxlen = 0;
+    Lengths maxlens;
 
     for (const auto l : *lst) {
-        for (const auto f : l->processed) {
-            maxlen[f.first] = std::max(f.second.second, maxlen[f.first]);
+        for (const auto &f : l->processed) {
+            maxlens[f.first] = std::max(f.second.second, maxlens[f.first]);
+        }
+
+        maxlen = std::max(l->totlen, maxlen);
+    }
+
+    struct winsize w = { 0 };
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w); // NOLINT
+
+    int columns = 0;
+
+    if (settings.forced_columns > 0) {
+        columns = settings.forced_columns;
+    } else {
+        int calc = (
+                static_cast<float>(w.ws_col) /
+                static_cast<float>(maxlen)
+            );
+        columns = std::max(calc, 1);
+    }
+
+    int current = 0;
+    std::string output = "";
+
+    for (const auto l : *lst) {
+        int outlen = 0;
+        std::string curr = l->print(maxlens, &outlen);
+
+        if (outlen < maxlen) {
+            curr += std::string(maxlen - outlen, ' ');
+        }
+
+        output += curr;
+        current++;
+
+        if (current == columns)  {
+            printf("%s\033[0m\n", rtrim(output).c_str());
+            current = 0;
+            output = "";
         }
     }
 
-    if (settings.list) {
-        for (const auto l : *lst) {
-            std::string output = l->print(maxlen);
-            rtrim(output);
-
-            printf("%s\033[0m\n", output.c_str());
-        }
-    } else {
-        struct winsize w = { 0 };
-        ioctl(STDOUT_FILENO, TIOCGWINSZ, &w); // NOLINT
-
-        maxlen['F'] += 1;
-        int columns = 0;
-
-        if (settings.forced_columns > 0) {
-            columns = settings.forced_columns;
-        } else {
-            int calc = (
-                static_cast<float>(w.ws_col) /
-                static_cast<float>(maxlen['F'])
-            );
-            columns = std::max(calc, 1);
-        }
-
-        int current = 0;
-
-        for (const auto l : *lst) {
-            printf("%s", l->print(maxlen).c_str());
-            current++;
-
-            if (current == columns)  {
-                printf("\n"); // NOLINT
-                current = 0;
-            }
-        }
-
-        if (current != 0)  {
-            printf("\n"); // NOLINT
-        }
+    if (current != 0)  {
+        printf("%s\033[0m\n", rtrim(output).c_str());
+        current = 0;
+        output = "";
     }
 }
 
@@ -476,7 +451,8 @@ void loadconfig()
 
     settings.forced_columns = 0;
 
-    settings.format = cpp11_getstring(ini, "symbols:format", " @p    @U  @^r @t  @^s  @f");
+    settings.list_format = cpp11_getstring(ini, "symbols:list_format", " @p    @U  @^r @t  @^s  @G@f");
+    settings.format = cpp11_getstring(ini, "symbols:format", "@G@F");
 
     // NOLINTNEXTLINE
     settings.size_number_color = iniparser_getboolean(ini, "settings:size_number_color", true);
@@ -747,6 +723,10 @@ int main(int argc, const char *argv[])
 
             case 'l':
                 settings.list = !settings.list;
+                if (settings.list) {
+                    settings.format = settings.list_format;
+                    settings.forced_columns = 1;
+                }
                 break;
 
             case 'n':
@@ -760,7 +740,6 @@ int main(int argc, const char *argv[])
 
             case 'F':
                 settings.format = optarg;
-                settings.list = true;
                 break;
 
             case 'h':
@@ -772,10 +751,6 @@ int main(int argc, const char *argv[])
                 parse = false;
                 break;
         }
-    }
-
-    if (!settings.list) {
-        settings.format = "@F";
     }
 
     #ifdef USE_GIT

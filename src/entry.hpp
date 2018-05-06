@@ -2,11 +2,19 @@
 #ifndef ENTRY_HPP_
 #define ENTRY_HPP_
 
+#include <algorithm>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <vector>
 
 extern "C" {
+    #include <iniparser.h>
+    #include <sys/stat.h>
     #include <sys/types.h>
 }
 
@@ -80,6 +88,7 @@ struct settings_t { // NOLINT
     bool date_number_color;
 
     std::string format;
+    std::string list_format;
 
     #ifdef USE_GIT
     bool override_git_repo_color;
@@ -261,8 +270,9 @@ public:
     time_t modified;
     int64_t bsize;
     uint32_t mode;
+    int totlen;
 
-    std::string print(Lengths maxlen);
+    std::string print(Lengths maxlens, int *outlen);
 
     OutputFormat processed;
 private:
@@ -286,7 +296,7 @@ private:
     static uint32_t cleanlen(std::string input);
     Segment format(char c);
 
-    std::string isMountpoint(char* fullpath, struct stat *st);
+    std::string isMountpoint(char *fullpath, struct stat *st);
     std::string unitConv(float size);
     std::string findColor(const char *file);
     std::string getColor(const char *file, uint32_t mode);
@@ -297,5 +307,84 @@ private:
 
     void postprocess();
 };
+
+static inline const char *cpp11_getstring(dictionary *d, const char *key,
+        const char *def)
+{
+    return iniparser_getstring(d, key, const_cast<char *>(def)); // NOLINT
+}
+
+static inline bool exists(const char *name)
+{
+    struct stat buffer = { 0 };
+    return (stat(name, &buffer) == 0);
+}
+
+static inline std::string rtrim(std::string &s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+
+    return s;
+}
+
+static inline bool wildcmp(const char *w, const char *s, uint8_t wl,
+                           uint8_t sl)
+{
+    const char *wp = &w[wl]; // NOLINT
+    const char *sp = &s[sl]; // NOLINT
+
+    bool star = false;
+
+loopStart:
+
+    for (; *sp; --sp, --wp, --wl, --sl) { // NOLINT
+        switch (*wp) {
+            case '*':
+                star = true;
+                sp = &s[sl], wp = &w[wl]; // NOLINT
+
+                if (*--wp == 0) { // NOLINT
+                    return true;
+                }
+
+                goto loopStart;
+
+            default:
+                if (*sp != *wp) {
+                    goto starCheck;
+                }
+
+                break;
+        }
+    }
+
+    if (*wp == '*') {
+        --wp; // NOLINT
+    }
+
+    return (*wp == 0);
+
+starCheck:
+
+    if (!star) {
+        return false;
+    }
+
+    sp--; // NOLINT
+    goto loopStart;
+}
+
+template<typename... Args>
+static inline std::string fmt(const char* fmt, Args... args)
+{
+    size_t size = snprintf(nullptr, 0, fmt, args...);
+    std::string buf;
+    buf.reserve(size + 1);
+    buf.resize(size);
+    snprintf(&buf[0], size + 1, fmt, args...);
+    return buf;
+}
 
 #endif // ENTRY_HPP_

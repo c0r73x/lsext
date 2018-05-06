@@ -17,7 +17,10 @@ date_number_color = 1
 ; T = iso time (XX:XX)
 ; s = size
 ; f = file
-format = " @p    @U  @^r @t  @^s  @f"
+; F = file only (no link or mount)
+
+list_format = " @p    @U  @^r @t  @^s  @G@f"
+format = "@G@F"
 
 show_hidden = 0
 list = 0
