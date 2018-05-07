@@ -356,6 +356,7 @@ void printdir(FileList *lst)
     struct winsize w = { 0 };
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w); // NOLINT
 
+    maxlen += 1;
     int columns = 0;
 
     if (settings.forced_columns > 0) {
