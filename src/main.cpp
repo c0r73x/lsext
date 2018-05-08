@@ -26,7 +26,7 @@ extern "C" {
 using FileList = std::vector<Entry *>;
 using DirList = std::unordered_map<std::string, FileList>;
 
-static re2::RE2 git_re("/\\.git/?$");
+static re2::RE2 git_re("/\\.git/?$"); // NOLINT
 
 settings_t settings = {0}; // NOLINT
 
@@ -273,7 +273,7 @@ Entry *addfile(const char *fpath, const char *file)
            );
 }
 
-FileList listdir(const char *path, const std::string &fp, bool hidden)
+FileList listdir(const char *path)
 {
     FileList lst;
     DIR* dir;
@@ -283,8 +283,8 @@ FileList listdir(const char *path, const std::string &fp, bool hidden)
 
         while ((ent = readdir((dir))) != nullptr) {
             if (
-                strcmp(ent->d_name, ".") == 0 ||
-                strcmp(ent->d_name, "..") == 0
+                strcmp(&ent->d_name[0], ".") == 0 ||
+                strcmp(&ent->d_name[0], "..") == 0
             ) {
                 continue;
             }
@@ -370,29 +370,28 @@ void printdir(FileList *lst)
     }
 
     int current = 0;
-    std::string output = "";
+    std::string output;
 
     for (const auto l : *lst) {
         int outlen = 0;
         std::string curr = l->print(maxlens, &outlen);
 
         if (outlen < maxlen) {
-            curr += std::string(maxlen - outlen, ' ');
+            curr += std::string(maxlen - outlen, ' '); // NOLINT
         }
 
         output += curr;
         current++;
 
         if (current == columns)  {
-            printf("%s\033[0m\n", rtrim(output).c_str());
+            printf("%s\033[0m\n", rtrim(output).c_str()); // NOLINT
             current = 0;
             output = "";
         }
     }
 
     if (current != 0)  {
-        printf("%s\033[0m\n", rtrim(output).c_str());
-        current = 0;
+        printf("%s\033[0m\n", rtrim(output).c_str()); // NOLINT
         output = "";
     }
 }
@@ -770,8 +769,8 @@ int main(int argc, const char *argv[])
 
         uint32_t count = argc - optind;
 
-        #pragma omp parallel for shared(count)
-        for (uint32_t i = 0; i < count; i++) { // NOLINT
+        #pragma omp parallel for
+        for (uint32_t i = 0; i < count; i++) {
             struct stat st = {0};
 
             if ((lstat(sp.at(i), &st)) < 0) {
@@ -801,7 +800,7 @@ int main(int argc, const char *argv[])
                 if (S_ISDIR(st.st_mode)) { // NOLINT
                     dirs.insert(DirList::value_type(
                         sp.at(i),
-                        listdir(sp.at(i), "/*", false) // NOLINT
+                        listdir(sp.at(i)) // NOLINT
                     ));
                 } else {
                     char file[PATH_MAX] = {0};
@@ -814,7 +813,7 @@ int main(int argc, const char *argv[])
     } else {
         dirs.insert(DirList::value_type(
             "./",
-            listdir(".", "/*", false) // NOLINT
+            listdir(".") // NOLINT
         ));
     }
 

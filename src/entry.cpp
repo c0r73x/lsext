@@ -180,17 +180,17 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
            );
 }
 
-Entry::Entry(const char *file, char *fullpath, struct stat *st,
-             uint32_t flags)
+Entry::Entry(const char *file, char *fullpath, struct stat *st, uint32_t flags)
 {
     this->islink = false;
     this->file = file;
     this->git = ' ';
     this->suffix = ' ';
+    this->totlen = 0;
 
     if (st == nullptr) {
-        this->user = colorize("????", settings.color.user.user);
-        this->group = colorize("????", settings.color.user.group);
+        this->user = colorize("????", settings.color.user.user); // NOLINT
+        this->group = colorize("????", settings.color.user.group); // NOLINT
         this->mode = 0;
         this->isdir = false;
         this->modified = 0;
@@ -541,7 +541,7 @@ Segment Entry::format(char c)
         }
 
         default: {
-            output.first = std::string(1, c);
+            output.first = std::string(1, c); // NOLINT
         }
     }
 
@@ -597,7 +597,7 @@ std::string Entry::print(Lengths maxlens, int *outlen)
                     auto m = maxlens[*c];
                     *outlen += m;
 
-                    output += std::string(m - s.second, ' ');
+                    output += std::string(m - s.second, ' '); // NOLINT
                     output += s.first;
                 } else {
                     auto s = processed[*c];
@@ -605,7 +605,7 @@ std::string Entry::print(Lengths maxlens, int *outlen)
                     *outlen += m;
 
                     output += s.first;
-                    output += std::string(m - s.second, ' ');
+                    output += std::string(m - s.second, ' '); // NOLINT
                 }
 
                 break;
@@ -623,7 +623,7 @@ std::string Entry::print(Lengths maxlens, int *outlen)
 std::string Entry::findColor(const char *file)
 {
     if (settings.colors) {
-        auto c = colors.find(file);
+        auto c = colors.find(file); // NOLINT
 
         if (c != colors.end() && c->second != "target") {
             return "\033[" + c->second + "m";
@@ -653,7 +653,7 @@ std::string Entry::findColor(const char *file)
         return "\033[0m"; // NOLINT
     }
 
-    return "";
+    return ""; // NOLINT
 }
 
 std::string Entry::getColor(const char *file, uint32_t mode)
@@ -772,8 +772,6 @@ char Entry::fileTypeLetter(uint32_t mode)
 
 char Entry::fileHasAcl()
 {
-    ssize_t  xattr;
-
     #ifdef S_ISLNK
 
     if (S_ISLNK(mode)) { // NOLINT
@@ -784,7 +782,7 @@ char Entry::fileHasAcl()
 
     #ifdef __linux__
 
-    xattr = getxattr(
+    ssize_t xattr = getxattr(
                 fullpath.c_str(),
                 XATTR_NAME_POSIX_ACL_ACCESS,
                 nullptr,
@@ -805,9 +803,7 @@ char Entry::fileHasAcl()
                     0
                 );
 
-        if (xattr < 0 && errno == ENODATA) {
-            xattr = 0;
-        } else if (xattr > 0) {
+        if (xattr > 0) {
             return '+';
         }
     }
@@ -822,7 +818,7 @@ char Entry::fileHasAcl()
         acl = nullptr;
     }
 
-    xattr = listxattr(fullpath.c_str(), NULL, 0, XATTR_NOFOLLOW);
+    ssize_t xattr = listxattr(fullpath.c_str(), NULL, 0, XATTR_NOFOLLOW);
 
     if (xattr < 0) {
         xattr = 0;
@@ -843,9 +839,9 @@ char Entry::fileHasAcl()
 
 std::string Entry::chmodPerms(uint32_t mode)
 {
-    std::string sbits = std::to_string((mode >> 6) & 7) +
-        std::to_string((mode >> 3) & 7) +
-        std::to_string(mode & 7);
+    std::string sbits = std::to_string((mode >> 6u) & 7u) +
+        std::to_string((mode >> 3u) & 7u) +
+        std::to_string(mode & 7u);
 
     return colorperms(sbits);
 }
@@ -868,9 +864,9 @@ std::string Entry::lsPerms(uint32_t mode)
 
     bits[0] = static_cast<char>(fileTypeLetter(mode));
 
-    strncpy(&bits[1], gsl::at(rwx, (mode >> 6) & 7), 3); // NOLINT
-    strncpy(&bits[4], gsl::at(rwx, (mode >> 3) & 7), 3); // NOLINT
-    strncpy(&bits[7], gsl::at(rwx, (mode & 7)), 3); // NOLINT
+    strncpy(&bits[1], gsl::at(rwx, (mode >> 6u) & 7u), 3u);
+    strncpy(&bits[4], gsl::at(rwx, (mode >> 3u) & 7u), 3u);
+    strncpy(&bits[7], gsl::at(rwx, (mode & 7u)), 3u);
 
     if ((mode & S_ISUID) != 0) { // NOLINT
         bits[3] = (mode & S_IXUSR) != 0 ? 's' : 'S'; // NOLINT

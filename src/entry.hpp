@@ -320,13 +320,14 @@ static inline bool exists(const char *name)
     return (stat(name, &buffer) == 0);
 }
 
-static inline std::string rtrim(std::string &s)
+static inline std::string rtrim(const std::string &s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
+    std::string output = s;
+    output.erase(std::find_if(output.rbegin(), output.rend(), [](int ch) {
+        return (std::isspace(ch) == 0);
+    }).base(), output.end());
 
-    return s;
+    return output;
 }
 
 static inline bool wildcmp(const char *w, const char *s, uint8_t wl,
