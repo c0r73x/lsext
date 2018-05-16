@@ -206,7 +206,7 @@ Entry *addfile(const char *fpath, const char *file)
                 return new Entry(file, &fullpath[0], nullptr, 0); // NOLINT
             }
 
-            strncpy(&fullpath[0], lpath.c_str(), PATH_MAX);
+            strncpy(&fullpath[0], lpath.c_str(), PATH_MAX - 1);
         }
     }
 
@@ -804,7 +804,7 @@ int main(int argc, const char *argv[])
                     ));
                 } else {
                     char file[PATH_MAX] = {0};
-                    strncpy(&file[0], sp.at(i), PATH_MAX);
+                    strncpy(&file[0], sp.at(i), PATH_MAX - 1);
 
                     files.push_back(addfile("", &file[0]));
                 }
