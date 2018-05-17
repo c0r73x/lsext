@@ -113,7 +113,7 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     #pragma omp parallel shared(flags, count)
     {
         int i = omp_get_thread_num() * count / omp_get_num_threads();
-        int stop = (omp_get_thread_num() + 1) * count / omp_get_num_threads();   
+        int stop = (omp_get_thread_num() + 1) * count / omp_get_num_threads();
 
         for (; i < stop && (flags & GIT_DIR_DIRTY) == 0; ++i) {
             const git_status_entry *entry = git_status_byindex(statuses, i);
@@ -667,6 +667,44 @@ void loadconfig()
 
     iniparser_freedict(ini);
 }
+void printHelp()
+{
+    printf("\
+switch (c) {\n\
+    case 'c':\n\
+        settings.forced_columns = std::strtol(optarg, nullptr, 10);\n\
+    case 'L':\n\
+        settings.resolve_links = !settings.resolve_links;\n\
+    case 'M':\n\
+        settings.resolve_mounts = !settings.resolve_mounts;\n\
+    case 'a':\n\
+        settings.show_hidden = !settings.show_hidden;\n\
+    case 'r':\n\
+        settings.reversed = !settings.reversed;\n\
+    case 'f':\n\
+        settings.dirs_first = !settings.dirs_first;\n\
+    case 't':\n\
+        settings.sort = SORT_MODIFIED;\n\
+    case 'S':\n\
+        settings.sort = SORT_SIZE;\n\
+    case 'A':\n\
+        settings.sort = SORT_ALPHA;\n\
+    case 'l':\n\
+        settings.list = !settings.list;\n\
+    case 'n':\n\
+        settings.colors = !settings.colors;\n\
+    case 'N':\n\
+        settings.no_conf = true;\n\
+        loadconfig();\n\
+    case 'F':\n\
+        settings.format = optarg;\n\
+        settings.list = true;\n\
+    case 'h':\n\
+        printHelp();\n\
+    default:\n\
+        parse = false;\n\
+}\n");
+}
 
 int main(int argc, const char *argv[])
 {
@@ -744,7 +782,7 @@ int main(int argc, const char *argv[])
 
             case 'h':
                 // NOLINTNEXTLINE
-                printf("\nTODO: Add help.\n\n");
+                printHelp();
                 return EXIT_SUCCESS;
 
             default:
