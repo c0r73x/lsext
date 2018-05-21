@@ -110,17 +110,12 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 
     size_t count = git_status_list_entrycount(statuses);
 
-    #pragma omp parallel shared(flags, count)
-    {
-        int i = omp_get_thread_num() * count / omp_get_num_threads();
-        int stop = (omp_get_thread_num() + 1) * count / omp_get_num_threads();   
+    for (size_t i = 0; i < count; ++i) {
+        const git_status_entry *entry = git_status_byindex(statuses, i);
 
-        for (; i < stop && (flags & GIT_DIR_DIRTY) == 0; ++i) {
-            const git_status_entry *entry = git_status_byindex(statuses, i);
-
-            if (entry->status != 0) {
-                flags |= GIT_DIR_DIRTY;
-            }
+        if (entry->status != 0) {
+            flags |= GIT_DIR_DIRTY;
+            break;
         }
     }
 
@@ -249,7 +244,9 @@ Entry *addfile(const char *fpath, const char *file)
 
             if (S_ISDIR(st.st_mode)) { // NOLINT
                 git_status_file(&flags, repo, fpath.c_str());
-                flags |= dirflags(repo, rp, fpath);
+                if ((flags & GIT_STATUS_IGNORED) == 0) {
+                    flags |= dirflags(repo, rp, fpath);
+                }
             } else {
                 git_status_file(&flags, repo, fpath.c_str());
             }
