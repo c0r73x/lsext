@@ -4,6 +4,11 @@ node {
         sh 'git clean -fdx; sleep 4;'
     }
     stage("Build") {
-        sh "make"
+        try {
+            sh "make"
+            slackSend color: 'good', message: 'lsext built successfully'
+        } catch(err) {
+            slackSend color: 'bad', message: err
+        }
     }
 }
