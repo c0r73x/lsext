@@ -1,14 +1,29 @@
-node {
-    stage("Checkout") {
-        git url: 'https://github.com/c0r73x/lsext.git'
-        sh 'git clean -fdx; sleep 4;'
+pipeline
+{
+    agent any
+    stages
+    {
+        stage('build')
+        {
+            steps
+            {
+                sh 'make'
+            }
+        }
     }
-    stage("Build") {
-        try {
-            sh "make"
-            slackSend color: 'good', message: 'lsext built successfully'
-        } catch(err) {
-            slackSend color: 'bad', message: err
+    post
+    {
+        always
+        {
+            deleteDir() /* clean up our workspace */
+        }
+        success
+        {
+           slackstatus("success")
+        }
+        failure
+        {
+            slackstatus("fail")
         }
     }
 }
