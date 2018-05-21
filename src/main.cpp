@@ -104,6 +104,7 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     int error = git_status_list_new(&statuses, repo, &opts);
 
     if (error < 0) { // Probably bare repo
+        git_status_list_free(statuses);
         git_repository_free(repo);
         return GIT_ISREPO | GIT_DIR_BARE;
     }
@@ -119,6 +120,7 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
         }
     }
 
+    git_status_list_free(statuses);
     git_repository_free(repo);
     return flags;
 }
