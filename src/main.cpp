@@ -201,7 +201,7 @@ Entry *addfile(const char *fpath, const char *file)
                 return new Entry(file, &fullpath[0], nullptr, 0); // NOLINT
             }
 
-            strncpy(&fullpath[0], lpath.c_str(), PATH_MAX);
+            strncpy(&fullpath[0], lpath.c_str(), PATH_MAX - 1);
         }
     }
 
@@ -664,6 +664,44 @@ void loadconfig()
 
     iniparser_freedict(ini);
 }
+void printHelp()
+{
+    printf("\
+switch (c) {\n\
+    case 'c':\n\
+        settings.forced_columns = std::strtol(optarg, nullptr, 10);\n\
+    case 'L':\n\
+        settings.resolve_links = !settings.resolve_links;\n\
+    case 'M':\n\
+        settings.resolve_mounts = !settings.resolve_mounts;\n\
+    case 'a':\n\
+        settings.show_hidden = !settings.show_hidden;\n\
+    case 'r':\n\
+        settings.reversed = !settings.reversed;\n\
+    case 'f':\n\
+        settings.dirs_first = !settings.dirs_first;\n\
+    case 't':\n\
+        settings.sort = SORT_MODIFIED;\n\
+    case 'S':\n\
+        settings.sort = SORT_SIZE;\n\
+    case 'A':\n\
+        settings.sort = SORT_ALPHA;\n\
+    case 'l':\n\
+        settings.list = !settings.list;\n\
+    case 'n':\n\
+        settings.colors = !settings.colors;\n\
+    case 'N':\n\
+        settings.no_conf = true;\n\
+        loadconfig();\n\
+    case 'F':\n\
+        settings.format = optarg;\n\
+        settings.list = true;\n\
+    case 'h':\n\
+        printHelp();\n\
+    default:\n\
+        parse = false;\n\
+}\n");
+}
 
 int main(int argc, const char *argv[])
 {
@@ -741,7 +779,7 @@ int main(int argc, const char *argv[])
 
             case 'h':
                 // NOLINTNEXTLINE
-                printf("\nTODO: Add help.\n\n");
+                printHelp();
                 return EXIT_SUCCESS;
 
             default:
@@ -801,7 +839,7 @@ int main(int argc, const char *argv[])
                     ));
                 } else {
                     char file[PATH_MAX] = {0};
-                    strncpy(&file[0], sp.at(i), PATH_MAX);
+                    strncpy(&file[0], sp.at(i), PATH_MAX - 1);
 
                     files.push_back(addfile("", &file[0]));
                 }
