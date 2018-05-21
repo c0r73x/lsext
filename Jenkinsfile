@@ -1,6 +1,7 @@
 node {
     stage("Checkout") {
-        git branch: 'master' 'https://github.com/c0r73x/lsext.git'
+        git url: 'https://github.com/c0r73x/lsext.git'
+        sh 'git clean -fdx; sleep 4;'
     }
     stage("Build") {
         sh "make"
