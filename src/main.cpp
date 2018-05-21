@@ -229,7 +229,7 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
             if (S_ISDIR(st.st_mode)) { // NOLINT
                 git_status_file(&flags, repo, fpath.c_str());
 
-                if ((flags & GIT_STATUS_IGNORED) == 0) {
+                if ((flags & GIT_STATUS_IGNORED) == 0 && fpath != ".git") {
                     flags |= dirflags(repo, rp, fpath);
                 }
             } else {
@@ -278,7 +278,6 @@ FileList listdir(const char *path)
             rp = root.ptr;
             re2::RE2::Replace(&rp, git_re, "");
         }
-
         #endif
 
         while ((ent = readdir((dir))) != nullptr) {
