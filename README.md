@@ -1,3 +1,5 @@
+[![Build Status](http://fredrik.fulhax.nu:8090/job/c0r73x/lsext/master/badge/icon)](http://fredrik.fulhax.nu:8090/job/c0r73x/lsext/master)
+
 # lsext
 My personal extended version of ls with git support, colors and other fancy
 stuff
