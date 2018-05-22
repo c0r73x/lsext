@@ -1,7 +1,7 @@
 #include <re2/re2.h>
+#include <gsl-lite.h>
 
 #include "entry.hpp"
-#include "gsl-lite.h"
 
 extern "C" {
     #include <dirent.h>

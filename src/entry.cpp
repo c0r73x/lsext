@@ -12,8 +12,7 @@
 #include <unordered_map>
 
 #include <re2/re2.h>
-
-#include "gsl-lite.h"
+#include <gsl-lite.h>
 
 extern "C" {
 #include <dirent.h>

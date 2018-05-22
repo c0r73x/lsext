@@ -42,7 +42,8 @@ set(COMMON_SRC
 )
 
 include_directories(
-    "src/"
+    "../src/"
+    "../externals/gsl-lite/"
     ${GIT_INCLUDE_DIR}
     ${RE2_INCLUDE_DIR}
     ${INIPARSER_INCLUDE_DIRS}
