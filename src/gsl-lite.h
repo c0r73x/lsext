@@ -1682,8 +1682,8 @@ template< class T >
 class basic_string_span
 {
 public:
-    T &operator=(const T &other) = delete;
-    T &operator=(T &&other) = delete;
+    basic_string_span<T> &operator=(const T &other) = delete;
+    basic_string_span<T> &operator=(T &&other) = delete;
 
     basic_string_span<T>(const T &) {};
 
