@@ -1685,6 +1685,8 @@ public:
     T &operator=(const T &other) = delete;
     T &operator=(T &&other) = delete;
 
+    basic_string_span<T>(const T &) {};
+
     typedef T element_type;
     typedef span<T> span_type;
 
