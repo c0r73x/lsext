@@ -1,5 +1,5 @@
-#include <re2/re2.h>
 #include <gsl-lite.h>
+#include <re2/re2.h>
 
 #include "entry.hpp"
 
