@@ -180,12 +180,12 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
            );
 }
 
-Entry::Entry(const char *file, char *fullpath, struct stat *st, uint32_t flags)
+Entry::Entry(const std::string &file, char *fullpath, struct stat *st, uint32_t flags) : 
+    file(file),
+    git(1, ' '), // NOLINT
+    suffix(1, ' ') // NOLINT
 {
     this->islink = false;
-    this->file = file;
-    this->git = ' ';
-    this->suffix = ' ';
     this->totlen = 0;
 
     if (st == nullptr) {
@@ -620,7 +620,7 @@ std::string Entry::print(Lengths maxlens, int *outlen)
     return output;
 }
 
-std::string Entry::findColor(const char *file)
+std::string Entry::findColor(const std::string &file)
 {
     if (settings.colors) {
         auto c = colors.find(file); // NOLINT
@@ -633,9 +633,9 @@ std::string Entry::findColor(const char *file)
             [file](const std::pair<std::string, std::string> &t) -> bool {
                 return wildcmp(
                     t.first.c_str(),
-                    file,
+                    file.c_str(),
                     t.first.length() - 1,
-                    strlen(file) - 1
+                    file.length() - 1
                 );
             }
         );
@@ -656,7 +656,7 @@ std::string Entry::findColor(const char *file)
     return ""; // NOLINT
 }
 
-std::string Entry::getColor(const char *file, uint32_t mode)
+std::string Entry::getColor(const std::string &file, uint32_t mode)
 {
     if ((mode & S_ISUID) != 0) { // NOLINT
         return findColor(SLK_SUID);

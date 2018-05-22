@@ -249,7 +249,7 @@ class Entry
 {
 public:
     Entry(
-        const char *file,
+        const std::string &file,
         char *fullpath,
         struct stat *st,
         uint32_t flags
@@ -298,8 +298,8 @@ private:
 
     std::string isMountpoint(char *fullpath, struct stat *st);
     std::string unitConv(float size);
-    std::string findColor(const char *file);
-    std::string getColor(const char *file, uint32_t mode);
+    std::string findColor(const std::string &file);
+    std::string getColor(const std::string &file, uint32_t mode);
     std::string lsPerms(uint32_t mode);
     std::string chmodPerms(uint32_t mode);
 
