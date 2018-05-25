@@ -17,7 +17,7 @@ extern "C" {
     #ifdef USE_GIT
         #include <git2.h>
     #else
-    typedef int git_repository;
+        using git_repository = int;
     #endif
 }
 

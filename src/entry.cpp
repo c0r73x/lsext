@@ -15,30 +15,30 @@
 #include <re2/re2.h>
 
 extern "C" {
-#include <dirent.h>
-#include <grp.h>
-#include <libgen.h>
-#include <pwd.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
-#include <sys/xattr.h>
-#include <unistd.h>
-#include <wordexp.h>
+    #include <dirent.h>
+    #include <grp.h>
+    #include <libgen.h>
+    #include <pwd.h>
+    #include <sys/stat.h>
+    #include <sys/statvfs.h>
+    #include <sys/xattr.h>
+    #include <unistd.h>
+    #include <wordexp.h>
 
     #ifdef __linux__
-#include <linux/xattr.h>
-#include <mntent.h>
+        #include <linux/xattr.h>
+        #include <mntent.h>
     #elif __APPLE__
-#include <sys/types.h>
-#include <sys/acl.h>
+        #include <sys/types.h>
+        #include <sys/acl.h>
 
-#include <sys/param.h>
-#include <sys/ucred.h>
-#include <sys/mount.h>
+        #include <sys/param.h>
+        #include <sys/ucred.h>
+        #include <sys/mount.h>
     #endif
 
     #ifdef USE_GIT
-#include <git2.h>
+        #include <git2.h>
     #endif
 }
 
