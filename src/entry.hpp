@@ -346,7 +346,7 @@ loopStart:
                 star = true;
                 sp = &s[sl], wp = &w[wl]; // NOLINT
 
-                if (*--wp == 0) { // NOLINT
+                if (wl == 0) { // NOLINT
                     return true;
                 }
 
@@ -363,9 +363,10 @@ loopStart:
 
     if (*wp == '*') {
         --wp; // NOLINT
+        --wl;
     }
 
-    return (*wp == 0);
+    return (wl == 0);
 
 starCheck:
 
@@ -374,6 +375,7 @@ starCheck:
     }
 
     sp--; // NOLINT
+    sl--;
     goto loopStart;
 }
 
