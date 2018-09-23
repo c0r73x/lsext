@@ -363,7 +363,7 @@ loopStart:
 
     if (*wp == '*') {
         --wp; // NOLINT
-        --wl;
+        wl -= (wl != 0) ? 1 : 0;
     }
 
     return (wl == 0);
@@ -375,7 +375,7 @@ starCheck:
     }
 
     sp--; // NOLINT
-    sl--;
+    sl -= (sl != 0) ? 1 : 0;
     goto loopStart;
 }
 
