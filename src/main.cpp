@@ -365,7 +365,7 @@ void printdir(FileList *lst)
     for (const auto l : *lst) {
         int outlen = 0;
 
-        if (l->extension != ext) {
+        if ((settings.sort & SORT_TYPE) == SORT_TYPE && l->extension != ext) {
             // NOLINTNEXTLINE
             fprintf(stdout, "\n\033[0m%s:\n", l->extension.c_str());
             ext = l->extension;
