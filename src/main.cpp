@@ -44,10 +44,10 @@ void initcolors()
 }
 
 #ifdef USE_GIT
-unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
+unsigned char dirflags(git_repository *repo, std::string rp, std::string path)
 {
     bool isrepo = false;
-    unsigned int flags = GIT_DIR_CLEAN;
+    unsigned char flags = GIT_DIR_CLEAN;
 
     git_status_options opts = GIT_STATUS_OPTIONS_INIT;
     opts.flags = (
@@ -70,14 +70,14 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
                 // NOLINTNEXTLINE
                 fprintf(stderr, "Unable to open git repository at %s", root.ptr);
                 git_buf_free(&root);
-                return UINT_MAX;
+                return UCHAR_MAX;
             }
 
             rp = root.ptr;
             re2::RE2::Replace(&rp, git_re, "");
         } else {
             git_buf_free(&root);
-            return UINT_MAX;
+            return UCHAR_MAX;
         }
 
         flags |= GIT_ISREPO;
@@ -308,18 +308,18 @@ void printdir(FileList *lst)
 
         int64_t cmp = 0;
 
-        switch (settings.sort) {
-            case SORT_ALPHA:
+        if ((settings.sort & SORT_TYPE) == SORT_TYPE) {
+            cmp = b->extension.compare(a->extension);
+        }
+
+        if (cmp == 0) {
+            if ((settings.sort & SORT_ALPHA) == SORT_ALPHA) {
                 cmp = b->file.compare(a->file);
-                break;
-
-            case SORT_MODIFIED:
+            } else if ((settings.sort & SORT_MODIFIED) == SORT_MODIFIED) {
                 cmp = a->modified - b->modified;
-                break;
-
-            case SORT_SIZE:
+            } else if ((settings.sort & SORT_SIZE) == SORT_SIZE) {
                 cmp = a->bsize - b->bsize;
-                break;
+            }
         }
 
         if (settings.reversed) {
@@ -359,10 +359,18 @@ void printdir(FileList *lst)
     }
 
     int current = 0;
+    std::string ext;
     std::string output;
 
     for (const auto l : *lst) {
         int outlen = 0;
+
+        if (l->extension != ext) {
+            // NOLINTNEXTLINE
+            fprintf(stdout, "\n\033[0m%s:\n", l->extension.c_str());
+            ext = l->extension;
+        }
+
         std::string curr = l->print(maxlens, &outlen);
 
         if (outlen < maxlen) {
@@ -373,14 +381,14 @@ void printdir(FileList *lst)
         current++;
 
         if (current == columns)  {
-            printf("%s\033[0m\n", rtrim(output).c_str()); // NOLINT
+            fprintf(stdout, "%s\033[0m\n", rtrim(output).c_str()); // NOLINT
             current = 0;
             output = "";
         }
     }
 
     if (current != 0)  {
-        printf("%s\033[0m\n", rtrim(output).c_str()); // NOLINT
+        fprintf(stdout, "%s\033[0m\n", rtrim(output).c_str()); // NOLINT
         output = "";
     }
 }
@@ -462,7 +470,7 @@ void loadconfig()
     settings.reversed = GETBOOL("settings:reversed", 0);
     settings.dirs_first = GETBOOL("settings:dirs_first", 1);
 
-    settings.sort = static_cast<sort_t>(GETINT("settings:sort", SORT_ALPHA));
+    settings.sort = SORT_ALPHA;
 
     settings.colors = GETBOOL("settings:colors", 1);
 
@@ -699,7 +707,7 @@ int main(int argc, const char *argv[])
 
     while (parse) {
         // NOLINTNEXTLINE
-        int c = getopt(argc, const_cast<char **>(argv), "AalrtfSLMnhNc:F:");
+        int c = getopt(argc, const_cast<char **>(argv), "AalrtXfSLMnhNc:F:");
 
         switch (c) {
             case 'c':
@@ -726,16 +734,23 @@ int main(int argc, const char *argv[])
                 settings.dirs_first = !settings.dirs_first;
                 break;
 
+            case 'X':
+                settings.sort |= SORT_TYPE;
+                break;
+
             case 't':
-                settings.sort = SORT_MODIFIED;
+                settings.sort |= SORT_MODIFIED;
+                settings.sort &= ~(SORT_SIZE | SORT_ALPHA);
                 break;
 
             case 'S':
-                settings.sort = SORT_SIZE;
+                settings.sort |= SORT_SIZE;
+                settings.sort &= ~(SORT_MODIFIED | SORT_ALPHA);
                 break;
 
             case 'A':
-                settings.sort = SORT_ALPHA;
+                settings.sort |= SORT_ALPHA;
+                settings.sort &= ~(SORT_SIZE | SORT_MODIFIED);
                 break;
 
             case 'l':

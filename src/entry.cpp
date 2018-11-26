@@ -179,7 +179,12 @@ std::string Entry::isMountpoint(char *fullpath, struct stat *st)
            );
 }
 
-Entry::Entry(const std::string &file, char *fullpath, struct stat *st, uint32_t flags) : 
+Entry::Entry(
+    const std::string &file,
+    char *fullpath,
+    struct stat *st,
+    uint32_t flags
+) :
     file(file),
     git(1, ' '), // NOLINT
     suffix(1, ' ') // NOLINT
@@ -377,6 +382,18 @@ Entry::Entry(const std::string &file, char *fullpath, struct stat *st, uint32_t 
                                settings.symbols.suffix.exec,
                                settings.color.suffix.exec
                            );
+        }
+    }
+
+    if (isdir){
+        extension = "directory";
+    } else {
+        std::string::size_type idx = file.rfind('.');
+
+        if (idx != std::string::npos) {
+            extension = file.substr(idx + 1);
+        } else {
+            extension = "unknown";
         }
     }
 

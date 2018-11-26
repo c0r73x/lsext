@@ -43,10 +43,10 @@ extern "C" {
 #define SLK_MULTIHARDLINK "mh"
 #define SLK_CLRTOEOL "cl"
 
-#define GIT_DIR_CLEAN 0x00000000u
-#define GIT_DIR_DIRTY 0x00000001u
-#define GIT_DIR_BARE  0x00000010u
-#define GIT_ISREPO    0x10000000u
+#define GIT_DIR_CLEAN 0b0000'0000u
+#define GIT_DIR_DIRTY 0b0000'0010u
+#define GIT_DIR_BARE  0b0000'0100u
+#define GIT_ISREPO    0b0000'1000u
 
 using DateFormat = std::pair<std::string, std::string>;
 
@@ -54,11 +54,10 @@ using Segment = std::pair<std::string, int>;
 using OutputFormat = std::unordered_map<char, Segment>;
 using Lengths = std::unordered_map<char, int>;
 
-enum sort_t {
-    SORT_ALPHA,
-    SORT_MODIFIED,
-    SORT_SIZE,
-};
+#define SORT_TYPE     0b0000'0001u
+#define SORT_ALPHA    0b0000'0010u
+#define SORT_MODIFIED 0b0000'0100u
+#define SORT_SIZE     0b0000'1000u
 
 enum dateunit_t {
     DATE_SEC = 0,
@@ -99,7 +98,7 @@ struct settings_t { // NOLINT
 
     int forced_columns;
 
-    sort_t sort;
+    unsigned char sort;
 
     struct colors_t { // NOLINT
         struct suffix_t {
@@ -263,6 +262,7 @@ public:
     Entry &operator=(Entry &&other) = delete;
 
     std::string file;
+    std::string extension;
 
     bool isdir;
     bool islink;
