@@ -183,7 +183,7 @@ Entry::Entry(
     const std::string &file,
     char *fullpath,
     struct stat *st,
-    uint32_t flags
+    unsigned char flags
 ) :
     file(file),
     git(1, ' '), // NOLINT
@@ -206,7 +206,7 @@ Entry::Entry(
 
         #ifdef USE_GIT
 
-        if (flags != UINT_MAX) {
+        if (flags != UCHAR_MAX) {
             std::string symbol;
             color_t color = {0};
 
