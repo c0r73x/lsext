@@ -843,6 +843,7 @@ int main(int argc, const char *argv[])
                     strncpy(&file[0], sp.at(i), PATH_MAX - 1);
 
                     // NOLINTNEXTLINE
+                    #pragma omp critical
                     files.push_back(addfile("", &file[0], nullptr, ""));
                 }
             }
