@@ -48,6 +48,8 @@ extern "C" {
 #define GIT_DIR_BARE  0b0000'0100u
 #define GIT_ISREPO    0b0000'1000u
 
+#define NO_FLAGS ~0u
+
 using DateFormat = std::pair<std::string, std::string>;
 
 using Segment = std::pair<std::string, int>;

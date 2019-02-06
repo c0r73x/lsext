@@ -44,7 +44,7 @@ void initcolors()
 }
 
 #ifdef USE_GIT
-unsigned char dirflags(git_repository *repo, std::string rp, std::string path)
+unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 {
     bool isrepo = false;
     unsigned char flags = GIT_DIR_CLEAN;
@@ -70,14 +70,14 @@ unsigned char dirflags(git_repository *repo, std::string rp, std::string path)
                 // NOLINTNEXTLINE
                 fprintf(stderr, "Unable to open git repository at %s", root.ptr);
                 git_buf_dispose(&root);
-                return UCHAR_MAX;
+                return NO_FLAGS;
             }
 
             rp = root.ptr;
             re2::RE2::Replace(&rp, git_re, "");
         } else {
             git_buf_dispose(&root);
-            return UCHAR_MAX;
+            return NO_FLAGS;
         }
 
         flags |= GIT_ISREPO;
@@ -177,7 +177,7 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
 
     #endif /* S_ISLNK */
 
-    unsigned int flags = -1;
+    unsigned int flags = ~0;
 
     #ifdef USE_GIT
 

@@ -206,7 +206,7 @@ Entry::Entry(
 
         #ifdef USE_GIT
 
-        if (flags != -1) {
+        if (flags != NO_FLAGS) {
             std::string symbol;
             color_t color = {0};
 
