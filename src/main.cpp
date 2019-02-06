@@ -177,7 +177,7 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
 
     #endif /* S_ISLNK */
 
-    unsigned int flags = UINT_MAX;
+    unsigned int flags = -1;
 
     #ifdef USE_GIT
 

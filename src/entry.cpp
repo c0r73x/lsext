@@ -206,7 +206,7 @@ Entry::Entry(
 
         #ifdef USE_GIT
 
-        if (flags != UCHAR_MAX) {
+        if (flags != -1) {
             std::string symbol;
             color_t color = {0};
 
