@@ -17,7 +17,7 @@ See example [config](https://github.com/c0r73x/lsext/blob/master/lsext.ini.sampl
 | Iniparser     | **Required** | Recommended version 4.x, min 3.1 |
 | re2 | **Required** | |
 | OpenMP     | Optional | **Enabled by default** |
-| libgit2     | Optional | Recommended version 0.24.1+ **Enabled by default** |
+| libgit2     | Optional | version 0.28.0+ **Enabled by default** |
 
 
 ## Build dependencies
@@ -31,6 +31,7 @@ C++11 compatible compiler
 | Name        |            |
 | ------------- |:-------------:|
 | c     | |
+| X     | |
 | L | | |
 | M     |  |
 | a     | |
