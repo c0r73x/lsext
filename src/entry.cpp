@@ -183,7 +183,7 @@ Entry::Entry(
     const std::string &file,
     char *fullpath,
     struct stat *st,
-    unsigned char flags
+    unsigned int flags
 ) :
     file(file),
     git(1, ' '), // NOLINT

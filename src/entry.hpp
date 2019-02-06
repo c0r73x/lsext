@@ -251,7 +251,7 @@ public:
         const std::string &file,
         char *fullpath,
         struct stat *st,
-        unsigned char flags
+        unsigned int flags
     );
 
     Entry(const Entry &) = default;
