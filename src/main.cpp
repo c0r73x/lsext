@@ -69,21 +69,21 @@ unsigned char dirflags(git_repository *repo, std::string rp, std::string path)
             if (error < 0) {
                 // NOLINTNEXTLINE
                 fprintf(stderr, "Unable to open git repository at %s", root.ptr);
-                git_buf_free(&root);
+                git_buf_dispose(&root);
                 return UCHAR_MAX;
             }
 
             rp = root.ptr;
             re2::RE2::Replace(&rp, git_re, "");
         } else {
-            git_buf_free(&root);
+            git_buf_dispose(&root);
             return UCHAR_MAX;
         }
 
         flags |= GIT_ISREPO;
 
         path.replace(path.begin(), path.begin() + rp.length(), "");
-        git_buf_free(&root);
+        git_buf_dispose(&root);
     }
 
     opts.pathspec.count = 1;
@@ -282,7 +282,7 @@ FileList listdir(const char *path)
 
         if (repo != nullptr) {
             git_repository_free(repo);
-            git_buf_free(&root);
+            git_buf_dispose(&root);
         }
 
         #endif
