@@ -9,6 +9,7 @@ extern "C" {
     #include <pwd.h>
     #include <sys/ioctl.h>
     #include <unistd.h>
+    #include <getopt.h>
 
     #ifdef USE_OPENMP
         #include <omp.h>
@@ -653,44 +654,32 @@ void loadconfig()
 
     iniparser_freedict(ini);
 }
+
+option long_options[] = {
+    {"help",no_argument,0,'H'},
+    {"forced-columns",required_argument,0,'c'},
+    {"resolve-links",no_argument,0,'L'},
+    {"resolve-mounts",no_argument,0,'M'},
+    {"show-hidden",no_argument,0,'a'},
+    {"reversed",no_argument,0,'r'},
+    {"dirs-first",no_argument,0,'f'},
+    {"sort-type",no_argument,0,'X'},
+    {"sort-date",no_argument,0,'t'},
+    {"sort-size",no_argument,0,'S'},
+    {"sort-name",no_argument,0,'A'},
+    {"list",no_argument,0,'l'},
+    {"no-color",no_argument,0,'n'},
+    {"format",required_argument,0,'F'},
+    {0,0,0,0}
+};
+
 void printHelp()
 {
     // NOLINTNEXTLINE
-    printf("\
-switch (c) {\n\
-    case 'c':\n\
-        settings.forced_columns = std::strtol(optarg, nullptr, 10);\n\
-    case 'L':\n\
-        settings.resolve_links = !settings.resolve_links;\n\
-    case 'M':\n\
-        settings.resolve_mounts = !settings.resolve_mounts;\n\
-    case 'a':\n\
-        settings.show_hidden = !settings.show_hidden;\n\
-    case 'r':\n\
-        settings.reversed = !settings.reversed;\n\
-    case 'f':\n\
-        settings.dirs_first = !settings.dirs_first;\n\
-    case 't':\n\
-        settings.sort = SORT_MODIFIED;\n\
-    case 'S':\n\
-        settings.sort = SORT_SIZE;\n\
-    case 'A':\n\
-        settings.sort = SORT_ALPHA;\n\
-    case 'l':\n\
-        settings.list = !settings.list;\n\
-    case 'n':\n\
-        settings.colors = !settings.colors;\n\
-    case 'N':\n\
-        settings.no_conf = true;\n\
-        loadconfig();\n\
-    case 'F':\n\
-        settings.format = optarg;\n\
-        settings.list = true;\n\
-    case 'h':\n\
-        printHelp();\n\
-    default:\n\
-        parse = false;\n\
-}\n");
+    for(int i=0;long_options[i].name!=0;i++) {
+        printf("-%c --%s\n",long_options[i].val,long_options[i].name);
+
+    }
 }
 
 int main(int argc, const char *argv[])
@@ -707,7 +696,8 @@ int main(int argc, const char *argv[])
 
     while (parse) {
         // NOLINTNEXTLINE
-        int c = getopt(argc, const_cast<char **>(argv), "AalrtXfSLMnhNc:F:");
+        int c = getopt_long(argc,const_cast<char **>(argv),"Hc:LMarfXtSAlnF:",
+                long_options,0);
 
         switch (c) {
             case 'c':
@@ -776,7 +766,7 @@ int main(int argc, const char *argv[])
                 settings.format = optarg;
                 break;
 
-            case 'h':
+            case 'H':
                 // NOLINTNEXTLINE
                 printHelp();
                 return EXIT_SUCCESS;
