@@ -657,28 +657,32 @@ void loadconfig()
 
 option long_options[] = {
     {"help",no_argument,0,'H'},
-    {"forced-columns",required_argument,0,'c'},
-    {"resolve-links",no_argument,0,'L'},
-    {"resolve-mounts",no_argument,0,'M'},
-    {"show-hidden",no_argument,0,'a'},
-    {"reversed",no_argument,0,'r'},
     {"dirs-first",no_argument,0,'f'},
-    {"sort-type",no_argument,0,'X'},
-    {"sort-date",no_argument,0,'t'},
-    {"sort-size",no_argument,0,'S'},
-    {"sort-name",no_argument,0,'A'},
+    {"forced-columns",required_argument,0,'c'},
+    {"format",required_argument,0,'F'},
     {"list",no_argument,0,'l'},
     {"no-color",no_argument,0,'n'},
-    {"format",required_argument,0,'F'},
+    {"resolve-links",no_argument,0,'L'},
+    {"resolve-mounts",no_argument,0,'M'},
+    {"reversed",no_argument,0,'r'},
+    {"show-hidden",no_argument,0,'a'},
+    {"sort-date",no_argument,0,'t'},
+    {"sort-name",no_argument,0,'A'},
+    {"sort-size",no_argument,0,'S'},
+    {"sort-type",no_argument,0,'X'},
     {0,0,0,0}
 };
 
 void printHelp()
 {
     // NOLINTNEXTLINE
-    for(int i=0;long_options[i].name!=0;i++) {
+    printf("--help\n");
+    for(int i=1;long_options[i].name!=0;i++) {
+        if(long_options[i].has_arg!=no_argument) {
+        printf("-%c \"option\" --%s=\"option\"\n",long_options[i].val,long_options[i].name);
+        } else {
         printf("-%c --%s\n",long_options[i].val,long_options[i].name);
-
+        }
     }
 }
 
@@ -696,7 +700,7 @@ int main(int argc, const char *argv[])
 
     while (parse) {
         // NOLINTNEXTLINE
-        int c = getopt_long(argc,const_cast<char **>(argv),"Hc:LMarfXtSAlnF:",
+        int c = getopt_long(argc,const_cast<char **>(argv),"c:LMarfXtSAlnF:",
                 long_options,0);
 
         switch (c) {
