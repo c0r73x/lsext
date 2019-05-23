@@ -87,6 +87,7 @@ struct settings_t { // NOLINT
     bool colors;
     bool size_number_color;
     bool date_number_color;
+    bool numeric_id;
 
     std::string format;
     std::string list_format;

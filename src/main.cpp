@@ -9,6 +9,7 @@ extern "C" {
     #include <pwd.h>
     #include <sys/ioctl.h>
     #include <unistd.h>
+    #include <getopt.h>
 
     #ifdef USE_OPENMP
         #include <omp.h>
@@ -470,6 +471,8 @@ void loadconfig()
     settings.reversed = GETBOOL("settings:reversed", 0);
     settings.dirs_first = GETBOOL("settings:dirs_first", 1);
 
+    settings.numeric_id = GETBOOL("settings:numeric_id", 0);
+
     settings.sort = SORT_ALPHA;
 
     settings.colors = GETBOOL("settings:colors", 1);
@@ -653,44 +656,37 @@ void loadconfig()
 
     iniparser_freedict(ini);
 }
+
+option long_options[] = {
+    {"help",no_argument,0,'H'},
+    {"dirs-first",no_argument,0,'f'},
+    {"forced-columns",required_argument,0,'c'},
+    {"format",required_argument,0,'F'},
+    {"list",no_argument,0,'l'},
+    {"no-color",no_argument,0,'C'},
+    {"resolve-links",no_argument,0,'L'},
+    {"resolve-mounts",no_argument,0,'M'},
+    {"reversed",no_argument,0,'r'},
+    {"show-hidden",no_argument,0,'a'},
+    {"sort-date",no_argument,0,'t'},
+    {"sort-name",no_argument,0,'A'},
+    {"sort-size",no_argument,0,'S'},
+    {"sort-type",no_argument,0,'X'},
+    {"numeric-uid-gid",no_argument,0,'n'},
+    {0,0,0,0}
+};
+
 void printHelp()
 {
     // NOLINTNEXTLINE
-    printf("\
-switch (c) {\n\
-    case 'c':\n\
-        settings.forced_columns = std::strtol(optarg, nullptr, 10);\n\
-    case 'L':\n\
-        settings.resolve_links = !settings.resolve_links;\n\
-    case 'M':\n\
-        settings.resolve_mounts = !settings.resolve_mounts;\n\
-    case 'a':\n\
-        settings.show_hidden = !settings.show_hidden;\n\
-    case 'r':\n\
-        settings.reversed = !settings.reversed;\n\
-    case 'f':\n\
-        settings.dirs_first = !settings.dirs_first;\n\
-    case 't':\n\
-        settings.sort = SORT_MODIFIED;\n\
-    case 'S':\n\
-        settings.sort = SORT_SIZE;\n\
-    case 'A':\n\
-        settings.sort = SORT_ALPHA;\n\
-    case 'l':\n\
-        settings.list = !settings.list;\n\
-    case 'n':\n\
-        settings.colors = !settings.colors;\n\
-    case 'N':\n\
-        settings.no_conf = true;\n\
-        loadconfig();\n\
-    case 'F':\n\
-        settings.format = optarg;\n\
-        settings.list = true;\n\
-    case 'h':\n\
-        printHelp();\n\
-    default:\n\
-        parse = false;\n\
-}\n");
+    printf("--help\n");
+    for(int i=1;long_options[i].name!=0;i++) {
+        if(long_options[i].has_arg!=no_argument) {
+        printf("-%c \"option\" --%s=\"option\"\n",long_options[i].val,long_options[i].name);
+        } else {
+        printf("-%c --%s\n",long_options[i].val,long_options[i].name);
+        }
+    }
 }
 
 int main(int argc, const char *argv[])
@@ -707,7 +703,8 @@ int main(int argc, const char *argv[])
 
     while (parse) {
         // NOLINTNEXTLINE
-        int c = getopt(argc, const_cast<char **>(argv), "AalrtXfSLMnhNc:F:");
+        int c = getopt_long(argc,const_cast<char **>(argv),"c:LMarfXtSAlnF:C",
+                long_options,0);
 
         switch (c) {
             case 'c':
@@ -764,6 +761,10 @@ int main(int argc, const char *argv[])
                 break;
 
             case 'n':
+                settings.numeric_id = !settings.numeric_id;
+                break;
+
+            case 'C':
                 settings.colors = !settings.colors;
                 break;
 
@@ -776,7 +777,7 @@ int main(int argc, const char *argv[])
                 settings.format = optarg;
                 break;
 
-            case 'h':
+            case 'H':
                 // NOLINTNEXTLINE
                 printHelp();
                 return EXIT_SUCCESS;
