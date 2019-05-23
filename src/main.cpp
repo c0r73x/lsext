@@ -471,6 +471,8 @@ void loadconfig()
     settings.reversed = GETBOOL("settings:reversed", 0);
     settings.dirs_first = GETBOOL("settings:dirs_first", 1);
 
+    settings.numeric_id = GETBOOL("settings:numeric_id", 0);
+
     settings.sort = SORT_ALPHA;
 
     settings.colors = GETBOOL("settings:colors", 1);
@@ -661,7 +663,7 @@ option long_options[] = {
     {"forced-columns",required_argument,0,'c'},
     {"format",required_argument,0,'F'},
     {"list",no_argument,0,'l'},
-    {"no-color",no_argument,0,'n'},
+    {"no-color",no_argument,0,'C'},
     {"resolve-links",no_argument,0,'L'},
     {"resolve-mounts",no_argument,0,'M'},
     {"reversed",no_argument,0,'r'},
@@ -670,6 +672,7 @@ option long_options[] = {
     {"sort-name",no_argument,0,'A'},
     {"sort-size",no_argument,0,'S'},
     {"sort-type",no_argument,0,'X'},
+    {"numeric-uid-gid",no_argument,0,'n'},
     {0,0,0,0}
 };
 
@@ -700,7 +703,7 @@ int main(int argc, const char *argv[])
 
     while (parse) {
         // NOLINTNEXTLINE
-        int c = getopt_long(argc,const_cast<char **>(argv),"c:LMarfXtSAlnF:",
+        int c = getopt_long(argc,const_cast<char **>(argv),"c:LMarfXtSAlnF:C",
                 long_options,0);
 
         switch (c) {
@@ -758,6 +761,10 @@ int main(int argc, const char *argv[])
                 break;
 
             case 'n':
+                settings.numeric_id = !settings.numeric_id;
+                break;
+
+            case 'C':
                 settings.colors = !settings.colors;
                 break;
 

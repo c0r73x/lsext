@@ -336,14 +336,23 @@ Entry::Entry(
         if (cuid == uid_cache.end()) {
             struct passwd pw = { nullptr };
             struct passwd *pwp;
-
-            if (getpwuid_r(st->st_uid, &pw, &buf[0], sizeof(buf), &pwp) != 0) {
-                // NOLINTNEXTLINE
-                this->user = colorize("????", settings.color.user.user);
+            if(settings.numeric_id) {
+                char uidbuf[PATH_MAX]={0};
+                snprintf(uidbuf,PATH_MAX,"%i",st->st_uid);
+                this->user=colorize(uidbuf,settings.color.user.user);
             } else {
-                // NOLINTNEXTLINE
-                this->user = colorize(pw.pw_name, settings.color.user.user);
+                getpwuid_r(st->st_uid, &pw, &buf[0], sizeof(buf), &pwp);
+                if (strlen(pw.pw_name) == 0) {
+                    char uidbuf[PATH_MAX]={0};
+                    snprintf(uidbuf,PATH_MAX,"%i",st->st_uid);
+                    // NOLINTNEXTLINE
+                    this->user = colorize(uidbuf,settings.color.user.user);
+                } else {
+                    // NOLINTNEXTLINE
+                    this->user = colorize(pw.pw_name, settings.color.user.user);
+                }
             }
+
 
             uid_cache[st->st_uid] = this->user;
         } else {
@@ -353,13 +362,21 @@ Entry::Entry(
         if (cgid == gid_cache.end()) {
             struct group gr = { nullptr };
             struct group *grp;
-
-            if (getgrgid_r(st->st_gid, &gr, &buf[0], sizeof(buf), &grp) != 0) {
-                // NOLINTNEXTLINE
-                this->group = colorize("????", settings.color.user.group);
+            if(settings.numeric_id) {
+                char gidbuf[PATH_MAX]={0};
+                snprintf(gidbuf,PATH_MAX,"%i",st->st_gid);
+                this->group=colorize(gidbuf,settings.color.user.group);
             } else {
-                // NOLINTNEXTLINE
-                this->group = colorize(gr.gr_name, settings.color.user.group);
+                getgrgid_r(st->st_gid, &gr, &buf[0], sizeof(buf), &grp);
+                if (strlen(gr.gr_name) == 0) {
+                    char gidbuf[PATH_MAX]={0};
+                    snprintf(gidbuf,PATH_MAX,"%i",st->st_gid);
+                    // NOLINTNEXTLINE
+                    this->group = colorize(gidbuf,settings.color.user.group);
+                } else {
+                    // NOLINTNEXTLINE
+                    this->group = colorize(gr.gr_name, settings.color.user.group);
+                }
             }
 
             gid_cache[st->st_gid] = this->group;
@@ -998,7 +1015,7 @@ DateFormat Entry::toDateFormat(const std::string &num, int unit)
            );
 }
 
-DateFormat Entry::isoTime(time_t ftime) 
+DateFormat Entry::isoTime(time_t ftime)
 {
     DateFormat output;
     auto tm = std::localtime(&ftime);
