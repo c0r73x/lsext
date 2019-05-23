@@ -11,6 +11,8 @@ Inspired by coreutils, ls++ and others.
 ## Customize
 See example [config](https://github.com/c0r73x/lsext/blob/master/lsext.ini.sample) 
 
+Feel free to share your screenshots and configs here, [Screenshots and config](https://github.com/c0r73x/lsext/issues/8)
+
 ## Dependencies
 ------------------
 | Name        |    Required        |   |
