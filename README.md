@@ -52,8 +52,8 @@ C++11 compatible compiler
 ## Known issues
 
 * OpenMP don't work on OSX (compile without USE_OPENMP)
-* git subdirectories don't show as git directories
-* git statuses for subdirectories don't show correctly
+* git submodules don't show as git directories
+* git statuses for files and directories inside submodules don't show correctly
 
 ## Licence
 MIT License
