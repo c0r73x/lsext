@@ -51,6 +51,7 @@ C++11 compatible compiler
 
 ## Known issues
 
+* Slow the first time it lists directories with lots of git repos (this is a limitation in libgit2)
 * OpenMP don't work on OSX (compile without USE_OPENMP)
 * git submodules don't show as git directories
 * git statuses for files and directories inside submodules don't show correctly
