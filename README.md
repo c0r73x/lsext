@@ -6,6 +6,7 @@ stuff
 
 Inspired by coreutils, ls++ and others.
 
+*Tested on Linux and Mac*
 
 ## Customize
 See example [config](https://github.com/c0r73x/lsext/blob/master/lsext.ini.sample) 
@@ -28,23 +29,29 @@ C++11 compatible compiler
 
 #### Flags
 ------------------
-| Name        |            |
-| ------------- |:-------------:|
-| c     | |
-| X     | |
-| L | | |
-| M     |  |
-| a     | |
-| r     | |
-| f     |  |
-| t     | Sort by modified date |
-| S     | Sort by size |
-| A     | Sort by alphabetical |
-| l     | |
-| n     | Toggle colors (on/off)  |
-| N     | Load with default, ignore config |
-| F     |  |
-| h     | Help |
+| short | long |
+| ------------- | ------------- |
+| | --help | 
+| -f | --dirs-first | 
+| -c "option" | --forced-columns="option" | 
+| -F "option" |  --format="option" | 
+| -l | --list | 
+| -C | --no-color | 
+| -L | --resolve-links | 
+| -M | --resolve-mounts | 
+| -r | --reversed | 
+| -a | --show-hidden | 
+| -t | --sort-date | 
+| -A | --sort-name | 
+| -S | --sort-size | 
+| -X | --sort-type | 
+| -n | --numeric-uid-gid | 
+
+## Known issues
+
+* OpenMP don't work on OSX (compile without USE_OPENMP)
+* git subdirectories don't show as git directories
+* git statuses for subdirectories don't show correctly
 
 ## Licence
 MIT License
