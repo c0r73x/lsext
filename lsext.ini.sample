@@ -28,8 +28,11 @@ resolve_links = 0
 resolve_mounts = 1
 reversed = 0
 dirs_first = 1
-resolve_repos = 1
 colors = 1
+
+; Only used if lsext was built with USE_GIT
+resolve_repos = 1
+resolve_in_repos = 1
 
 ; default sort method 0 = Alpha, 1 = Modified, 2 = Size
 sort = 0
