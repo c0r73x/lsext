@@ -35,3 +35,4 @@ callgrind.out.*
 
 build
 lsext.ini
+*.plist

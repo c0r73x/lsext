@@ -47,8 +47,13 @@ void initcolors()
 #ifdef USE_GIT
 unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 {
-    bool isrepo = false;
     unsigned char flags = GIT_DIR_CLEAN;
+
+    if (!settings.resolve_repos) {
+        return flags;
+    }
+
+    bool isrepo = false;
 
     git_status_options opts = GIT_STATUS_OPTIONS_INIT;
     opts.flags = (
@@ -182,7 +187,7 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
 
     #ifdef USE_GIT
 
-    if (repo != nullptr) {
+    if (repo != nullptr && settings.resolve_in_repos) {
         flags = 0;
         char dirpath[PATH_MAX] = {0};
 
@@ -467,6 +472,7 @@ void loadconfig()
     settings.resolve_links = GETBOOL("settings:resolve_links", 0);
     settings.resolve_mounts = GETBOOL("settings:resolve_mounts", 1);
 
+    settings.resolve_in_repos = GETBOOL("settings:resolve_in_repos", 1);
     settings.resolve_repos = GETBOOL("settings:resolve_repos", 1);
     settings.reversed = GETBOOL("settings:reversed", 0);
     settings.dirs_first = GETBOOL("settings:dirs_first", 1);

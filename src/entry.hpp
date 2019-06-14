@@ -80,6 +80,7 @@ struct settings_t { // NOLINT
     bool resolve_links;
     bool resolve_mounts;
     bool resolve_repos;
+    bool resolve_in_repos;
     bool show_hidden;
     bool reversed;
     bool dirs_first;
