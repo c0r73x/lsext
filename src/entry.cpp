@@ -11,7 +11,7 @@
 #include <locale>
 #include <unordered_map>
 
-#include <gsl-lite.h>
+#include <gsl-lite.hpp>
 #include <re2/re2.h>
 
 extern "C" {

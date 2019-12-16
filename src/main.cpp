@@ -1,4 +1,4 @@
-#include <gsl-lite.h>
+#include <gsl-lite.hpp>
 #include <re2/re2.h>
 
 #include "entry.hpp"
