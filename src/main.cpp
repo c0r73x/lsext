@@ -4,21 +4,21 @@
 #include "entry.hpp"
 
 extern "C" {
-    #include <dirent.h>
-    #include <libgen.h>
-    #include <pwd.h>
-    #include <sys/ioctl.h>
-    #include <unistd.h>
-    #include <getopt.h>
+#include <dirent.h>
+#include <libgen.h>
+#include <pwd.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <getopt.h>
 
     #ifdef USE_OPENMP
-        #include <omp.h>
+#include <omp.h>
     #endif
 
     #ifdef USE_GIT
-        #include <git2.h>
+#include <git2.h>
     #else
-        using git_repository = int;
+    using git_repository = int;
     #endif
 }
 
@@ -67,20 +67,42 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 
         git_buf root = { nullptr };
 
-        int error = git_repository_discover(&root, path.c_str(), 0, nullptr);
+        int error = -1;
 
-        if (error == 0) {
-            error = git_repository_open(&repo, root.ptr);
+        if (getenv("GIT_DIR") != nullptr) {
+            error = git_repository_open_ext(
+                        &repo,
+                        nullptr,
+                        GIT_REPOSITORY_OPEN_FROM_ENV,
+                        nullptr
+                    );
+            if (error == 0) {
+                rp = git_repository_workdir(repo);
+            }
+        }
 
-            if (error < 0) {
-                // NOLINTNEXTLINE
-                fprintf(stderr, "Unable to open git repository at %s", root.ptr);
+        if (error != 0) {
+            error = git_repository_discover(&root, path.c_str(), 0, nullptr);
+
+            if (error == 0) {
+                error = git_repository_open(&repo, root.ptr);
+
+                if (error < 0) {
+                    // NOLINTNEXTLINE
+                    fprintf(
+                        stderr,
+                        "Unable to open git repository at %s",
+                        root.ptr
+                    );
+                    git_buf_dispose(&root);
+                    return NO_FLAGS;
+                }
+
+                rp = git_repository_workdir(repo);
+            } else {
                 git_buf_dispose(&root);
                 return NO_FLAGS;
             }
-
-            rp = root.ptr;
-            re2::RE2::Replace(&rp, git_re, "");
         } else {
             git_buf_dispose(&root);
             return NO_FLAGS;
@@ -250,19 +272,40 @@ FileList listdir(const char *path)
         #ifdef USE_GIT
         git_buf root = { nullptr };
 
-        int error = git_repository_discover(&root, path, 0, nullptr);
+        int error = -1;
 
-        if (error == 0) {
-            error = git_repository_open(&repo, root.ptr);
+        if (getenv("GIT_DIR") != nullptr) {
+            error = git_repository_open_ext(
+                        &repo,
+                        nullptr,
+                        GIT_REPOSITORY_OPEN_FROM_ENV,
+                        nullptr
+                    );
 
-            if (error != 0) {
-                // NOLINTNEXTLINE
-                fprintf(stderr, "Unable to open git repository at %s", root.ptr);
+            if (error == 0) {
+                rp = git_repository_workdir(repo);
             }
-
-            rp = root.ptr;
-            re2::RE2::Replace(&rp, git_re, "");
         }
+
+        if (error < 0) {
+            error = git_repository_discover(&root, path, 0, nullptr);
+
+            if (error == 0) {
+                error = git_repository_open(&repo, root.ptr);
+
+                if (error != 0) {
+                    // NOLINTNEXTLINE
+                    fprintf(
+                        stderr,
+                        "Unable to open git repository at %s",
+                        root.ptr
+                    );
+                }
+
+                rp = git_repository_workdir(repo);
+            }
+        }
+
         #endif
 
         while ((ent = readdir((dir))) != nullptr) {
@@ -452,13 +495,14 @@ void loadconfig()
         }
     }
 
-    #define GETBOOL(a,b) static_cast<bool>(iniparser_getboolean(ini,a,b))
-    #define GETSTR(a,b) cpp11_getstring(ini,a,b)
-    #define GETINT(a,b) iniparser_getint(ini,a,b)
+#define GETBOOL(a,b) static_cast<bool>(iniparser_getboolean(ini,a,b))
+#define GETSTR(a,b) cpp11_getstring(ini,a,b)
+#define GETINT(a,b) iniparser_getint(ini,a,b)
 
     settings.forced_columns = 0;
 
-    settings.list_format = GETSTR("symbols:list_format", " @p    @U  @^r @t  @^s  @G@f");
+    settings.list_format = GETSTR("symbols:list_format",
+                                  " @p    @U  @^r @t  @^s  @G@f");
     settings.format = GETSTR("symbols:format", "@G@F");
 
     settings.size_number_color = GETBOOL("settings:size_number_color", 1);
@@ -486,12 +530,14 @@ void loadconfig()
     settings.color.suffix.exec.fg = GETINT("colors:suffix_exec_fg", 10);
     settings.color.suffix.dir.fg = GETINT("colors:suffix_dir_fg", -1);
     settings.color.suffix.link.fg = GETINT("colors:suffix_link_fg", -1);
-    settings.color.suffix.mountpoint.fg = GETINT("colors:suffix_mountpoint_fg", -1);
+    settings.color.suffix.mountpoint.fg = GETINT("colors:suffix_mountpoint_fg",
+                                          -1);
 
     settings.color.suffix.exec.bg = GETINT("colors:suffix_exec_bg", -1);
     settings.color.suffix.dir.bg = GETINT("colors:suffix_dir_bg", -1);
     settings.color.suffix.link.bg = GETINT("colors:suffix_link_bg", -1);
-    settings.color.suffix.mountpoint.bg = GETINT("colors:suffix_mointpoint_fg", -1);
+    settings.color.suffix.mountpoint.bg = GETINT("colors:suffix_mointpoint_fg",
+                                          -1);
 
     settings.color.perm.none.fg = GETINT("colors:perm_none_fg", 0);
     settings.color.perm.exec.fg = GETINT("colors:perm_exec_fg", 2);
@@ -580,7 +626,8 @@ void loadconfig()
     settings.symbols.suffix.exec = GETSTR("symbols:suffix_exec", "*");
     settings.symbols.suffix.dir = GETSTR("symbols:suffix_dir", "/");
     settings.symbols.suffix.link = GETSTR("symbols:suffix_link", " -> ");
-    settings.symbols.suffix.mountpoint = GETSTR("symbols:suffix_mountpoint", " @ ");
+    settings.symbols.suffix.mountpoint = GETSTR("symbols:suffix_mountpoint",
+                                         " @ ");
 
     settings.symbols.size.byte = GETSTR("symbols:size_byte", "B");
     settings.symbols.size.kilo = GETSTR("symbols:size_kilo", "K");
@@ -598,8 +645,10 @@ void loadconfig()
     settings.symbols.date.year = GETSTR("symbols:date_year", "year");
 
     #ifdef USE_GIT
-    settings.override_git_repo_color = GETBOOL("settings:override_git_repo_color", 0);
-    settings.override_git_dir_color = GETBOOL("settings:override_git_dir_color", 0);
+    settings.override_git_repo_color = GETBOOL("settings:override_git_repo_color",
+                                       0);
+    settings.override_git_dir_color = GETBOOL("settings:override_git_dir_color",
+                                      0);
 
     settings.symbols.git.ignore = GETSTR("symbols:git_ignore", "!");
     settings.symbols.git.conflict = GETSTR("symbols:git_conflict", "X");
@@ -664,33 +713,35 @@ void loadconfig()
 }
 
 option long_options[] = {
-    {"help",no_argument,0,'H'},
-    {"dirs-first",no_argument,0,'f'},
-    {"forced-columns",required_argument,0,'c'},
-    {"format",required_argument,0,'F'},
-    {"list",no_argument,0,'l'},
-    {"no-color",no_argument,0,'C'},
-    {"resolve-links",no_argument,0,'L'},
-    {"resolve-mounts",no_argument,0,'M'},
-    {"reversed",no_argument,0,'r'},
-    {"show-hidden",no_argument,0,'a'},
-    {"sort-date",no_argument,0,'t'},
-    {"sort-name",no_argument,0,'A'},
-    {"sort-size",no_argument,0,'S'},
-    {"sort-type",no_argument,0,'X'},
-    {"numeric-uid-gid",no_argument,0,'n'},
-    {0,0,0,0}
+    {"help", no_argument, 0, 'H'},
+    {"dirs-first", no_argument, 0, 'f'},
+    {"forced-columns", required_argument, 0, 'c'},
+    {"format", required_argument, 0, 'F'},
+    {"list", no_argument, 0, 'l'},
+    {"no-color", no_argument, 0, 'C'},
+    {"resolve-links", no_argument, 0, 'L'},
+    {"resolve-mounts", no_argument, 0, 'M'},
+    {"reversed", no_argument, 0, 'r'},
+    {"show-hidden", no_argument, 0, 'a'},
+    {"sort-date", no_argument, 0, 't'},
+    {"sort-name", no_argument, 0, 'A'},
+    {"sort-size", no_argument, 0, 'S'},
+    {"sort-type", no_argument, 0, 'X'},
+    {"numeric-uid-gid", no_argument, 0, 'n'},
+    {0, 0, 0, 0}
 };
 
 void printHelp()
 {
     // NOLINTNEXTLINE
     printf("--help\n");
-    for(int i=1;long_options[i].name!=0;i++) {
-        if(long_options[i].has_arg!=no_argument) {
-        printf("-%c \"option\" --%s=\"option\"\n",long_options[i].val,long_options[i].name);
+
+    for (int i = 1; long_options[i].name != 0; i++) {
+        if (long_options[i].has_arg != no_argument) {
+            printf("-%c \"option\" --%s=\"option\"\n", long_options[i].val,
+                   long_options[i].name);
         } else {
-        printf("-%c --%s\n",long_options[i].val,long_options[i].name);
+            printf("-%c --%s\n", long_options[i].val, long_options[i].name);
         }
     }
 }
@@ -709,8 +760,8 @@ int main(int argc, const char *argv[])
 
     while (parse) {
         // NOLINTNEXTLINE
-        int c = getopt_long(argc,const_cast<char **>(argv),"c:LMarfXtSAlnF:C",
-                long_options,0);
+        int c = getopt_long(argc, const_cast<char **>(argv), "c:LMarfXtSAlnF:C",
+                            long_options, 0);
 
         switch (c) {
             case 'c':
@@ -811,6 +862,7 @@ int main(int argc, const char *argv[])
         uint32_t count = argc - optind;
 
         #pragma omp parallel for
+
         for (uint32_t i = 0; i < count; i++) {
             struct stat st = {0};
 
