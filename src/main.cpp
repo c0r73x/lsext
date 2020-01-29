@@ -3,6 +3,8 @@
 
 #include "entry.hpp"
 
+#include <future>
+
 extern "C" {
 #include <dirent.h>
 #include <libgen.h>
@@ -24,8 +26,11 @@ extern "C" {
 
 using FileList = std::vector<Entry *>;
 using DirList = std::unordered_map<std::string, FileList>;
+using FlagsList = std::unordered_map<std::string, unsigned int>;
 
 static re2::RE2 git_re("/\\.git/?$"); // NOLINT
+
+std::promise<void> promise;
 
 settings_t settings = {0}; // NOLINT
 
@@ -42,6 +47,117 @@ void initcolors()
         size_t pos = token.find('='); // NOLINT
         colors[token.substr(0, pos)] = token.substr(pos + 1); // NOLINT
     }
+}
+
+static int path_common_prefix(const char *path1, const char *path2)
+{
+    int i = 0;
+    int ret = 0;
+
+    if ((path1[1] == '/') != (path2[1] == '/')) {
+        return 0;
+    }
+
+    while (*path1 && *path2) {
+        if (*path1 != *path2) {
+            break;
+        }
+
+        if (*path1 == '/') {
+            ret = i + 1;
+        }
+
+        path1++;
+        path2++;
+        i++;
+    }
+
+    if (!*path1 && !*path2) {
+        ret = i;
+    }
+
+    if (!*path1 && *path2 == '/') {
+        ret = i;
+    }
+
+    if (!*path2 && *path1 == '/') {
+        ret = i;
+    }
+
+    return ret;
+}
+
+static bool path_prefix(const char *prefix, const char *path)
+{
+    prefix++;
+    path++;
+
+    if (!*prefix) {
+        return *path != '/';
+    }
+
+    if (*prefix == '/' && !prefix[1]) {
+        return *path == '/';
+    }
+
+    while (*prefix && *path) {
+        if (*prefix != *path) {
+            break;
+        }
+
+        prefix++;
+        path++;
+    }
+
+    return (!*prefix && (*path == '/' || !*path));
+}
+
+static std::string relpath(const char *can_fname, const char *can_relative_to)
+{
+    std::string output;
+
+    if (!can_relative_to) {
+        return can_fname;
+    }
+
+    int common_index = path_common_prefix(can_relative_to, can_fname);
+
+    if (!common_index) {
+        return can_fname;
+    }
+
+    const char *relto_suffix = can_relative_to + common_index;
+    const char *fname_suffix = can_fname + common_index;
+
+    if (*relto_suffix == '/') {
+        relto_suffix++;
+    }
+
+    if (*fname_suffix == '/') {
+        fname_suffix++;
+    }
+
+    if (*relto_suffix) {
+        output += "..";
+
+        for (; *relto_suffix; ++relto_suffix) {
+            if (*relto_suffix == '/') {
+                output += "/..";
+            }
+        }
+
+        if (*fname_suffix) {
+            output += "/" + std::string(fname_suffix);
+        }
+    } else {
+        if (*fname_suffix) {
+            output += fname_suffix;
+        } else {
+            output += ".";
+        }
+    }
+
+    return output;
 }
 
 #ifdef USE_GIT
@@ -67,42 +183,23 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 
         git_buf root = { nullptr };
 
-        int error = -1;
+        int error = git_repository_discover(&root, path.c_str(), 0, nullptr);
 
-        if (getenv("GIT_DIR") != nullptr) {
-            error = git_repository_open_ext(
-                        &repo,
-                        nullptr,
-                        GIT_REPOSITORY_OPEN_FROM_ENV,
-                        nullptr
-                    );
-            if (error == 0) {
-                rp = git_repository_workdir(repo);
-            }
-        }
+        if (error == 0) {
+            error = git_repository_open(&repo, root.ptr);
 
-        if (error != 0) {
-            error = git_repository_discover(&root, path.c_str(), 0, nullptr);
-
-            if (error == 0) {
-                error = git_repository_open(&repo, root.ptr);
-
-                if (error < 0) {
-                    // NOLINTNEXTLINE
-                    fprintf(
-                        stderr,
-                        "Unable to open git repository at %s",
-                        root.ptr
-                    );
-                    git_buf_dispose(&root);
-                    return NO_FLAGS;
-                }
-
-                rp = git_repository_workdir(repo);
-            } else {
+            if (error < 0) {
+                // NOLINTNEXTLINE
+                fprintf(
+                    stderr,
+                    "Unable to open git repository at %s",
+                    root.ptr
+                );
                 git_buf_dispose(&root);
                 return NO_FLAGS;
             }
+
+            rp = git_repository_workdir(repo);
         } else {
             git_buf_dispose(&root);
             return NO_FLAGS;
@@ -151,10 +248,17 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 
     return flags;
 }
+
+int git_status(const char *path, unsigned int flags, void *userdata)
+{
+    /* printf("%s %d\n", path, flags); */
+    promise.set_value();
+    return 0;
+}
 #endif
 
 Entry *addfile(const char *fpath, const char *file, git_repository *repo,
-               const std::string &rp)
+               const std::string &rp, FlagsList &flagsList)
 {
     struct stat st = {0};
     std::string directory = fpath; // NOLINT
@@ -210,7 +314,6 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
     #ifdef USE_GIT
 
     if (repo != nullptr && settings.resolve_in_repos) {
-        flags = 0;
         char dirpath[PATH_MAX] = {0};
 
         if (
@@ -227,6 +330,12 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
             return new Entry(file, &fullpath[0], nullptr, 0);
         }
 
+        if (flagsList.count(&dirpath[0]) > 0) {
+            flags = flagsList[&dirpath[0]];
+        } else {
+            flags = 0;
+        }
+
         if (!S_ISLNK(st.st_mode)) { // NOLINT
             std::string fpath = &dirpath[0]; // NOLINT
             fpath.replace(fpath.begin(), fpath.begin() + rp.length(), "");
@@ -238,14 +347,16 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
             }
 
             if (S_ISDIR(st.st_mode)) { // NOLINT
-                git_status_file(&flags, repo, fpath.c_str());
+                /*     git_status_file(&flags, repo, fpath.c_str()); */
 
                 if ((flags & GIT_STATUS_IGNORED) == 0 && fpath != ".git") {
                     flags |= dirflags(repo, rp, fpath);
                 }
-            } else {
-                git_status_file(&flags, repo, fpath.c_str());
             }
+
+            /* } else { */
+            /*     git_status_file(&flags, repo, fpath.c_str()); */
+            /* } */
         }
     } else {
         if (S_ISDIR(st.st_mode)) { // NOLINT
@@ -258,10 +369,13 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
     return new Entry(file, &fullpath[0], &st, flags);
 }
 
-FileList listdir(const char *path)
+FileList listdir(const char *path, const char *parent)
 {
     FileList lst;
     DIR *dir;
+
+    char dirpath[PATH_MAX] = {0};
+    char rppath[PATH_MAX] = {0};
 
     if ((dir = opendir(path)) != nullptr) {
         dirent *ent;
@@ -284,6 +398,28 @@ FileList listdir(const char *path)
 
             if (error == 0) {
                 rp = git_repository_workdir(repo);
+
+                realpath(path, &dirpath[0]);
+                realpath(rp.c_str(), &rppath[0]);
+
+                unsigned int flags = 0;
+
+                if (!path_prefix(&rppath[0], &dirpath[0])) {
+                    repo = nullptr;
+                } else {
+                    std::string relp = relpath(&dirpath[0], &rppath[0]);
+                    git_status_file(&flags, repo, relp.c_str());
+                }
+
+                if (
+                    repo == nullptr ||
+                    (flags & (GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW)) != 0
+                ) {
+                    repo = nullptr;
+                    git_repository_free(repo);
+                    rp = "";
+                    error = -1;
+                }
             }
         }
 
@@ -306,6 +442,47 @@ FileList listdir(const char *path)
             }
         }
 
+        FlagsList flagsList;
+
+        if (repo != nullptr) {
+            git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+            opts.flags = (
+                             GIT_STATUS_OPT_INCLUDE_IGNORED |
+                             GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
+                             GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+                             GIT_STATUS_OPT_EXCLUDE_SUBMODULES |
+                             GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH
+                         );
+
+            /* std::future<void> future = promise.get_future(); */
+            /* git_status_foreach_ext(repo, &opts, git_status, nullptr); */
+            /* future.get(); */
+            git_status_list *list;
+            /* git_status_list_new(&list, repo, &opts); */
+
+            realpath(rp.c_str(), &rppath[0]);
+
+            if (git_status_list_new(&list, repo, &opts) == GIT_OK) {
+                for (size_t i = 0, iMax = git_status_list_entrycount(list); i < iMax; ++i) {
+                    const git_status_entry *status = git_status_byindex(list, i);
+                    const char *filePath = (status->head_to_index != nullptr) ?
+                                           status->head_to_index->new_file.path :
+                                           (status->index_to_workdir != nullptr) ?
+                                           status->index_to_workdir->new_file.path :
+                                           nullptr;
+
+
+                    if (filePath != nullptr) {
+                        std::string relp = rp + "/" + filePath;
+                        realpath(relp.c_str(), &dirpath[0]);
+                        flagsList[&dirpath[0]] = status->status;
+                    }
+                }
+
+                git_status_list_free(list);
+            }
+        }
+
         #endif
 
         while ((ent = readdir((dir))) != nullptr) {
@@ -320,7 +497,7 @@ FileList listdir(const char *path)
                 continue;
             }
 
-            auto f = addfile(path, &ent->d_name[0], repo, rp);
+            auto f = addfile(path, &ent->d_name[0], repo, rp, flagsList);
 
             if (f != nullptr) {
                 lst.push_back(f);
@@ -330,6 +507,7 @@ FileList listdir(const char *path)
         #ifdef USE_GIT
 
         if (repo != nullptr) {
+            flagsList.clear();
             git_repository_free(repo);
             git_buf_dispose(&root);
         }
@@ -468,15 +646,15 @@ void loadconfig()
 
     if (!settings.no_conf) {
         char filename[PATH_MAX] = {0};
-        char file[255] = {"/lsext.ini"};
+        char file[PATH_MAX] = {"/lsext.ini"};
 
         const char *confdir = getenv("XDG_CONFIG_HOME");
 
         if (confdir == nullptr) {
-            sprintf(&file[0], "/.lsext.ini"); // NOLINT
+            snprintf(&file[0], PATH_MAX, "/.lsext.ini"); // NOLINT
             confdir = gethome();
         } else {
-            sprintf(&filename[0], "%s%s", confdir, &file[0]); // NOLINT
+            snprintf(&filename[0], PATH_MAX, "%s%s", confdir, &file[0]); // NOLINT
 
             if (!exists(&filename[0])) {
                 sprintf(&file[0], "/.lsext.ini"); // NOLINT
@@ -487,7 +665,7 @@ void loadconfig()
         sprintf(&filename[0], "%s%s", confdir, &file[0]); // NOLINT
 
         if (!exists(&filename[0])) {
-            sprintf(&filename[0], "./lsext.ini"); // NOLINT
+            snprintf(&filename[0], PATH_MAX, "./lsext.ini"); // NOLINT
         }
 
         if (exists(&filename[0])) {
@@ -895,22 +1073,26 @@ int main(int argc, const char *argv[])
                 if (S_ISDIR(st.st_mode)) { // NOLINT
                     dirs.insert(DirList::value_type(
                                     sp.at(i),
-                                    listdir(sp.at(i)) // NOLINT
+                                    listdir(sp.at(i), nullptr) // NOLINT
                                 ));
                 } else {
                     char file[PATH_MAX] = {0};
                     strncpy(&file[0], sp.at(i), PATH_MAX - 1);
 
+                    FlagsList flagsList;
+
                     // NOLINTNEXTLINE
                     #pragma omp critical
-                    files.push_back(addfile("", &file[0], nullptr, ""));
+                    files.push_back(
+                        addfile("", &file[0], nullptr, "", flagsList)
+                    );
                 }
             }
         }
     } else {
         dirs.insert(DirList::value_type(
                         "./",
-                        listdir(".") // NOLINT
+                        listdir(".", nullptr) // NOLINT
                     ));
     }
 
