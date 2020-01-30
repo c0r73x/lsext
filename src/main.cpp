@@ -199,7 +199,11 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
                 return NO_FLAGS;
             }
 
-            rp = git_repository_workdir(repo);
+            const char *wd = git_repository_workdir(repo);
+            if (wd == nullptr) {
+                return GIT_ISREPO | GIT_DIR_BARE;
+            }
+            rp = wd;
         } else {
             git_buf_dispose(&root);
             return NO_FLAGS;
@@ -217,18 +221,6 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     opts.pathspec.strings[0] = const_cast<char *>(path.c_str()); // NOLINT
 
     git_status_list *statuses = nullptr;
-    int error = git_status_list_new(&statuses, repo, &opts);
-
-    if (error < 0) { // Probably bare repo
-        git_status_list_free(statuses);
-
-        if (isrepo) {
-            git_repository_free(repo);
-        }
-
-        return GIT_ISREPO | GIT_DIR_BARE;
-    }
-
     size_t count = git_status_list_entrycount(statuses);
 
     for (size_t i = 0; i < count; ++i) {
