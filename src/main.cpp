@@ -221,14 +221,17 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     opts.pathspec.strings[0] = const_cast<char *>(path.c_str()); // NOLINT
 
     git_status_list *statuses = nullptr;
-    size_t count = git_status_list_entrycount(statuses);
 
-    for (size_t i = 0; i < count; ++i) {
-        const git_status_entry *entry = git_status_byindex(statuses, i);
+    if (git_status_list_new(&statuses, repo, &opts) == 0) {
+        size_t count = git_status_list_entrycount(statuses);
 
-        if (entry->status != 0) {
-            flags |= GIT_DIR_DIRTY;
-            break;
+        for (size_t i = 0; i < count; ++i) {
+            const git_status_entry *entry = git_status_byindex(statuses, i);
+
+            if (entry->status != 0) {
+                flags |= GIT_DIR_DIRTY;
+                break;
+            }
         }
     }
 
