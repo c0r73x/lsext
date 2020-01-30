@@ -57,4 +57,5 @@ target_link_libraries(
     ${GIT_LIBRARY}
     ${RE2_LIBRARY}
     ${INIPARSER_LIBRARIES}
+    ${OpenMP_CXX_LIBRARIES}
 )

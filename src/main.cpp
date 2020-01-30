@@ -30,8 +30,6 @@ using FlagsList = std::unordered_map<std::string, unsigned int>;
 
 static re2::RE2 git_re("/\\.git/?$"); // NOLINT
 
-std::promise<void> promise;
-
 settings_t settings = {0}; // NOLINT
 
 void initcolors()
@@ -174,6 +172,7 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     git_status_options opts = GIT_STATUS_OPTIONS_INIT;
     opts.flags = (
                      GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
+                     GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH |
                      GIT_STATUS_OPT_EXCLUDE_SUBMODULES
                  );
 
@@ -242,13 +241,6 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     }
 
     return flags;
-}
-
-int git_status(const char *path, unsigned int flags, void *userdata)
-{
-    /* printf("%s %d\n", path, flags); */
-    promise.set_value();
-    return 0;
 }
 #endif
 
@@ -369,7 +361,6 @@ FileList listdir(const char *path)
     FileList lst;
     DIR *dir;
 
-    char dirpath[PATH_MAX] = {0};
     char rppath[PATH_MAX] = {0};
 
     if ((dir = opendir(path)) != nullptr) {
@@ -384,6 +375,8 @@ FileList listdir(const char *path)
         int error = -1;
 
         if (getenv("GIT_DIR") != nullptr) {
+            char dirpath[PATH_MAX] = {0};
+
             error = git_repository_open_ext(
                         &repo,
                         nullptr,
@@ -467,16 +460,13 @@ FileList listdir(const char *path)
                              GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH
                          );
 
-            /* std::future<void> future = promise.get_future(); */
-            /* git_status_foreach_ext(repo, &opts, git_status, nullptr); */
-            /* future.get(); */
             git_status_list *list;
-            /* git_status_list_new(&list, repo, &opts); */
 
             if (realpath(rp.c_str(), &rppath[0]) != nullptr) {
                 if (git_status_list_new(&list, repo, &opts) == GIT_OK) {
                     size_t iMax = git_status_list_entrycount(list);
 
+                    #pragma omp parallel for
                     for (size_t i = 0; i < iMax; ++i) {
                         const git_status_entry *status = git_status_byindex(list, i);
                         const char *filePath = (status->head_to_index != nullptr) ?
@@ -487,9 +477,11 @@ FileList listdir(const char *path)
 
 
                         if (filePath != nullptr) {
+                            char dirpath[PATH_MAX] = {0};
                             std::string relp = rp + "/" + filePath;
 
                             if (realpath(relp.c_str(), &dirpath[0]) != nullptr) {
+                                #pragma omp critical
                                 flagsList[&dirpath[0]] = status->status;
                             }
                         }
@@ -1057,7 +1049,6 @@ int main(int argc, const char *argv[])
         uint32_t count = argc - optind;
 
         #pragma omp parallel for
-
         for (uint32_t i = 0; i < count; i++) {
             struct stat st = {0};
 
@@ -1090,7 +1081,7 @@ int main(int argc, const char *argv[])
                 if (S_ISDIR(st.st_mode)) { // NOLINT
                     dirs.insert(DirList::value_type(sp.at(i), listdir(sp.at(i))));
                 } else {
-                    FlagsList flagsList;
+                    FlagsList flagsList = {};
 
                     // NOLINTNEXTLINE
                     #pragma omp critical
