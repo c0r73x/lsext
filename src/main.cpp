@@ -369,7 +369,7 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
     return new Entry(file, &fullpath[0], &st, flags);
 }
 
-FileList listdir(const char *path, const char *parent)
+FileList listdir(const char *path)
 {
     FileList lst;
     DIR *dir;
@@ -397,33 +397,39 @@ FileList listdir(const char *path, const char *parent)
                     );
 
             if (error == 0) {
-                rp = git_repository_workdir(repo);
-
-                if (realpath(path, &dirpath[0]) == nullptr) {
-                    git_repository_free(repo);
-                    return lst;
-                }
-
-                if (realpath(rp.c_str(), &rppath[0]) == nullptr) {
-                    git_repository_free(repo);
-                    return lst;
-                }
-
+                const char *wd = git_repository_workdir(repo);
                 unsigned int flags = 0;
 
-                if (!path_prefix(&rppath[0], &dirpath[0])) {
-                    repo = nullptr;
-                } else {
-                    std::string relp = relpath(&dirpath[0], &rppath[0]);
-                    git_status_file(&flags, repo, relp.c_str());
+                if (wd != nullptr) {
+                    rp = wd;
+
+                    if (realpath(path, &dirpath[0]) == nullptr) {
+                        git_repository_free(repo);
+                        return lst;
+                    }
+
+                    if (realpath(rp.c_str(), &rppath[0]) == nullptr) {
+                        git_repository_free(repo);
+                        return lst;
+                    }
+
+                    if (!path_prefix(&rppath[0], &dirpath[0])) {
+                        repo = nullptr;
+                    } else {
+                        std::string relp = relpath(&dirpath[0], &rppath[0]);
+                        git_status_file(&flags, repo, relp.c_str());
+                    }
                 }
 
                 if (
                     repo == nullptr ||
                     (flags & (GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW)) != 0
                 ) {
+                    if (repo != nullptr) {
+                        git_repository_free(repo);
+                    }
+
                     repo = nullptr;
-                    git_repository_free(repo);
                     rp = "";
                     error = -1;
                 }
@@ -435,21 +441,26 @@ FileList listdir(const char *path, const char *parent)
 
             if (error == 0) {
                 error = git_repository_open(&repo, root.ptr);
+                const char *wd = git_repository_workdir(repo);
 
-                if (error != 0) {
+                if (error < 0) {
                     // NOLINTNEXTLINE
                     fprintf(
                         stderr,
-                        "Unable to open git repository at %s",
+                        "Unable to open git repository at %s\n",
                         root.ptr
                     );
+                    repo = nullptr;
+                    rp = "";
+                } else if (wd != nullptr) {
+                    rp = wd;
+                } else {
+                    rp = "";
                 }
-
-                rp = git_repository_workdir(repo);
             }
         }
 
-        FlagsList flagsList;
+        FlagsList flagsList = {};
 
         if (repo != nullptr) {
             git_status_options opts = GIT_STATUS_OPTIONS_INIT;
@@ -668,7 +679,7 @@ void loadconfig()
             snprintf(&filename[0], PATH_MAX, "%s%s", confdir, &file[0]); // NOLINT
 
             if (!exists(&filename[0])) {
-                sprintf(&file[0], "/.lsext.ini"); // NOLINT
+                snprintf(&file[0], PATH_MAX, "/.lsext.ini"); // NOLINT
                 confdir = gethome();
             }
         }
@@ -902,22 +913,22 @@ void loadconfig()
 }
 
 option long_options[] = {
-    {"help", no_argument, 0, 'H'},
-    {"dirs-first", no_argument, 0, 'f'},
-    {"forced-columns", required_argument, 0, 'c'},
-    {"format", required_argument, 0, 'F'},
-    {"list", no_argument, 0, 'l'},
-    {"no-color", no_argument, 0, 'C'},
-    {"resolve-links", no_argument, 0, 'L'},
-    {"resolve-mounts", no_argument, 0, 'M'},
-    {"reversed", no_argument, 0, 'r'},
-    {"show-hidden", no_argument, 0, 'a'},
-    {"sort-date", no_argument, 0, 't'},
-    {"sort-name", no_argument, 0, 'A'},
-    {"sort-size", no_argument, 0, 'S'},
-    {"sort-type", no_argument, 0, 'X'},
-    {"numeric-uid-gid", no_argument, 0, 'n'},
-    {0, 0, 0, 0}
+    {"help", no_argument, nullptr, 'H'},
+    {"dirs-first", no_argument, nullptr, 'f'},
+    {"forced-columns", required_argument, nullptr, 'c'},
+    {"format", required_argument, nullptr, 'F'},
+    {"list", no_argument, nullptr, 'l'},
+    {"no-color", no_argument, nullptr, 'C'},
+    {"resolve-links", no_argument, nullptr, 'L'},
+    {"resolve-mounts", no_argument, nullptr, 'M'},
+    {"reversed", no_argument, nullptr, 'r'},
+    {"show-hidden", no_argument, nullptr, 'a'},
+    {"sort-date", no_argument, nullptr, 't'},
+    {"sort-name", no_argument, nullptr, 'A'},
+    {"sort-size", no_argument, nullptr, 'S'},
+    {"sort-type", no_argument, nullptr, 'X'},
+    {"numeric-uid-gid", no_argument, nullptr, 'n'},
+    {nullptr, 0, nullptr, 0}
 };
 
 void printHelp()
@@ -1082,29 +1093,20 @@ int main(int argc, const char *argv[])
                 #endif
 
                 if (S_ISDIR(st.st_mode)) { // NOLINT
-                    dirs.insert(DirList::value_type(
-                                    sp.at(i),
-                                    listdir(sp.at(i), nullptr) // NOLINT
-                                ));
+                    dirs.insert(DirList::value_type(sp.at(i), listdir(sp.at(i))));
                 } else {
-                    char file[PATH_MAX] = {0};
-                    strncpy(&file[0], sp.at(i), PATH_MAX - 1);
-
                     FlagsList flagsList;
 
                     // NOLINTNEXTLINE
                     #pragma omp critical
                     files.push_back(
-                        addfile("", &file[0], nullptr, "", flagsList)
+                        addfile("", sp.at(i), nullptr, "", flagsList)
                     );
                 }
             }
         }
     } else {
-        dirs.insert(DirList::value_type(
-                        "./",
-                        listdir(".", nullptr) // NOLINT
-                    ));
+        dirs.insert(DirList::value_type("./", listdir(".")));
     }
 
     if (!files.empty()) {
