@@ -399,8 +399,15 @@ FileList listdir(const char *path, const char *parent)
             if (error == 0) {
                 rp = git_repository_workdir(repo);
 
-                realpath(path, &dirpath[0]);
-                realpath(rp.c_str(), &rppath[0]);
+                if (realpath(path, &dirpath[0]) == nullptr) {
+                    git_repository_free(repo);
+                    return lst;
+                }
+
+                if (realpath(rp.c_str(), &rppath[0]) == nullptr) {
+                    git_repository_free(repo);
+                    return lst;
+                }
 
                 unsigned int flags = 0;
 
@@ -460,26 +467,30 @@ FileList listdir(const char *path, const char *parent)
             git_status_list *list;
             /* git_status_list_new(&list, repo, &opts); */
 
-            realpath(rp.c_str(), &rppath[0]);
+            if (realpath(rp.c_str(), &rppath[0]) != nullptr) {
+                if (git_status_list_new(&list, repo, &opts) == GIT_OK) {
+                    size_t iMax = git_status_list_entrycount(list);
 
-            if (git_status_list_new(&list, repo, &opts) == GIT_OK) {
-                for (size_t i = 0, iMax = git_status_list_entrycount(list); i < iMax; ++i) {
-                    const git_status_entry *status = git_status_byindex(list, i);
-                    const char *filePath = (status->head_to_index != nullptr) ?
-                                           status->head_to_index->new_file.path :
-                                           (status->index_to_workdir != nullptr) ?
-                                           status->index_to_workdir->new_file.path :
-                                           nullptr;
+                    for (size_t i = 0; i < iMax; ++i) {
+                        const git_status_entry *status = git_status_byindex(list, i);
+                        const char *filePath = (status->head_to_index != nullptr) ?
+                                               status->head_to_index->new_file.path :
+                                               (status->index_to_workdir != nullptr) ?
+                                               status->index_to_workdir->new_file.path :
+                                               nullptr;
 
 
-                    if (filePath != nullptr) {
-                        std::string relp = rp + "/" + filePath;
-                        realpath(relp.c_str(), &dirpath[0]);
-                        flagsList[&dirpath[0]] = status->status;
+                        if (filePath != nullptr) {
+                            std::string relp = rp + "/" + filePath;
+
+                            if (realpath(relp.c_str(), &dirpath[0]) != nullptr) {
+                                flagsList[&dirpath[0]] = status->status;
+                            }
+                        }
                     }
-                }
 
-                git_status_list_free(list);
+                    git_status_list_free(list);
+                }
             }
         }
 
