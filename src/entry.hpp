@@ -47,6 +47,7 @@ extern "C" {
 #define GIT_DIR_DIRTY 0b0000'0010u
 #define GIT_DIR_BARE  0b0000'0100u
 #define GIT_ISREPO    0b0000'1000u
+#define GIT_ISTRACKED 0b0001'0000u
 
 #define NO_FLAGS ~0u
 

@@ -235,14 +235,12 @@ Entry::Entry(
                     } else if ((flags & GIT_STATUS_IGNORED) != 0) {
                         color = settings.color.git.ignore;
                         symbol = settings.symbols.git.ignore;
-                    } else if ((flags & ( // NOLINT
-                                    GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW
-                                )) != 0) {
-                        color = settings.color.git.untracked;
-                        symbol = settings.symbols.git.untracked;
-                    } else {
+                    } else if ((flags & GIT_ISTRACKED) != 0) {
                         color = settings.color.git.dir_clean;
                         symbol = settings.symbols.git.dir_clean;
+                    } else {
+                        color = settings.color.git.untracked;
+                        symbol = settings.symbols.git.untracked;
                     }
 
                     if (settings.override_git_dir_color) {
@@ -273,14 +271,12 @@ Entry::Entry(
                 } else if ((flags & GIT_STATUS_WT_UNREADABLE) != 0) {
                     color = settings.color.git.unreadable;
                     symbol = settings.symbols.git.unreadable;
-                } else if ((flags & ( // NOLINT
-                                GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW
-                            )) != 0) {
-                    color = settings.color.git.untracked;
-                    symbol = settings.symbols.git.untracked;
-                } else {
+                } else if ((flags & GIT_ISTRACKED) != 0) {
                     color = settings.color.git.unchanged;
                     symbol = settings.symbols.git.unchanged;
+                } else {
+                    color = settings.color.git.untracked;
+                    symbol = settings.symbols.git.untracked;
                 }
 
                 this->git = colorize(symbol, color);

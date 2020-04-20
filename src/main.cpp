@@ -224,6 +224,10 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     if (git_status_list_new(&statuses, repo, &opts) == 0) {
         size_t count = git_status_list_entrycount(statuses);
 
+        if (count > 0) {
+            flags |= GIT_ISTRACKED;
+        }
+
         for (size_t i = 0; i < count; ++i) {
             const git_status_entry *entry = git_status_byindex(statuses, i);
 
@@ -455,7 +459,7 @@ FileList listdir(const char *path)
             opts.flags = (
                              GIT_STATUS_OPT_INCLUDE_IGNORED |
                              GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
-                             GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+                             /* GIT_STATUS_OPT_INCLUDE_UNTRACKED | */
                              GIT_STATUS_OPT_EXCLUDE_SUBMODULES |
                              GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH
                          );
@@ -482,7 +486,7 @@ FileList listdir(const char *path)
 
                             if (realpath(relp.c_str(), &dirpath[0]) != nullptr) {
                                 #pragma omp critical
-                                flagsList[&dirpath[0]] = status->status;
+                                flagsList[&dirpath[0]] = status->status | GIT_ISTRACKED;
                             }
                         }
                     }

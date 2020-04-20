@@ -36,6 +36,8 @@ endif()
 find_package(Iniparser REQUIRED)
 find_package(RE2 REQUIRED)
 
+message (${RE2_LIBRARY})
+
 set(COMMON_SRC
     "main.cpp"
     "entry.cpp"
