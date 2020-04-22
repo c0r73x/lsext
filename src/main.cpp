@@ -176,13 +176,13 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
                      GIT_STATUS_OPT_EXCLUDE_SUBMODULES
                  );
 
-    if (repo == nullptr) {
+    if (repo == nullptr || exists((rp  + path + "/.git").c_str())) {
         isrepo = true;
         opts.flags = GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
 
         git_buf root = { nullptr };
 
-        int error = git_repository_discover(&root, path.c_str(), 0, nullptr);
+        int error = git_repository_discover(&root, (rp + path).c_str(), 0, nullptr);
 
         if (error == 0) {
             error = git_repository_open(&repo, root.ptr);
@@ -214,34 +214,38 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
         git_buf_dispose(&root);
     }
 
-    opts.pathspec.count = 1;
+    if (repo != nullptr) {
+        opts.pathspec.count = 1;
 
-    opts.pathspec.strings = new char *[1]; // NOLINT
-    opts.pathspec.strings[0] = const_cast<char *>(path.c_str()); // NOLINT
+        opts.pathspec.strings = new char *[1]; // NOLINT
+        opts.pathspec.strings[0] = const_cast<char *>(path.c_str()); // NOLINT
 
-    git_status_list *statuses = nullptr;
+        git_status_list *statuses = nullptr;
 
-    if (git_status_list_new(&statuses, repo, &opts) == 0) {
-        size_t count = git_status_list_entrycount(statuses);
+        if (git_status_list_new(&statuses, repo, &opts) == 0) {
+            size_t count = git_status_list_entrycount(statuses);
 
-        if (count > 0) {
-            flags |= GIT_ISTRACKED;
-        }
+            if (count > 0) {
+                flags |= GIT_ISTRACKED;
+            }
 
-        for (size_t i = 0; i < count; ++i) {
-            const git_status_entry *entry = git_status_byindex(statuses, i);
+            for (size_t i = 0; i < count; ++i) {
+                const git_status_entry *entry = git_status_byindex(statuses, i);
 
-            if (entry->status != 0) {
-                flags |= GIT_DIR_DIRTY;
-                break;
+                if (entry->status != 0) {
+                    flags |= GIT_DIR_DIRTY;
+                    break;
+                }
             }
         }
-    }
 
-    git_status_list_free(statuses);
+        git_status_list_free(statuses);
 
-    if (isrepo) {
-        git_repository_free(repo);
+        if (isrepo) {
+            git_repository_free(repo);
+        }
+    } else {
+        return NO_FLAGS;
     }
 
     return flags;
@@ -413,10 +417,7 @@ FileList listdir(const char *path)
                     }
                 }
 
-                if (
-                    repo == nullptr ||
-                    (flags & (GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_NEW)) != 0
-                ) {
+                if (repo == nullptr) {
                     if (repo != nullptr) {
                         git_repository_free(repo);
                     }
