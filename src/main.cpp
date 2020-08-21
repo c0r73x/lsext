@@ -13,15 +13,15 @@ extern "C" {
 #include <unistd.h>
 #include <getopt.h>
 
-    #ifdef USE_OPENMP
-#include <omp.h>
-    #endif
+#ifdef USE_OPENMP
+    #include <omp.h>
+#endif
 
-    #ifdef USE_GIT
-#include <git2.h>
-    #else
+#ifdef USE_GIT
+    #include <git2.h>
+#else
     using git_repository = int;
-    #endif
+#endif
 }
 
 using FileList = std::vector<Entry *>;
@@ -185,13 +185,18 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
         int error = git_repository_discover(&root, (rp + path).c_str(), 0, nullptr);
 
         if (error == 0) {
-            error = git_repository_open(&repo, root.ptr);
+            error = git_repository_open_ext(
+                    &repo,
+                    root.ptr,
+                    GIT_REPOSITORY_OPEN_FROM_ENV,
+                    nullptr
+                );
 
             if (error < 0) {
                 // NOLINTNEXTLINE
                 fprintf(
                     stderr,
-                    "Unable to open git repository at %s",
+                    "Unable to open git repository at %s\n",
                     root.ptr
                 );
                 git_buf_dispose(&root);
@@ -382,74 +387,43 @@ FileList listdir(const char *path)
 
         int error = -1;
 
-        if (getenv("GIT_DIR") != nullptr) {
-            char dirpath[PATH_MAX] = {0};
+        char dirpath[PATH_MAX] = {0};
 
-            error = git_repository_open_ext(
-                        &repo,
-                        nullptr,
-                        GIT_REPOSITORY_OPEN_FROM_ENV,
-                        nullptr
-                    );
+        error = git_repository_open_ext(
+                    &repo,
+                    nullptr,
+                    GIT_REPOSITORY_OPEN_FROM_ENV,
+                    nullptr
+                );
 
-            if (error == 0) {
-                const char *wd = git_repository_workdir(repo);
-                unsigned int flags = 0;
+        if (error == 0) {
+            const char *wd = git_repository_workdir(repo);
+            unsigned int flags = 0;
 
-                if (wd != nullptr) {
-                    rp = wd;
+            if (wd != nullptr) {
+                rp = wd;
 
-                    if (realpath(path, &dirpath[0]) == nullptr) {
-                        git_repository_free(repo);
-                        return lst;
-                    }
-
-                    if (realpath(rp.c_str(), &rppath[0]) == nullptr) {
-                        git_repository_free(repo);
-                        return lst;
-                    }
-
-                    if (!path_prefix(&rppath[0], &dirpath[0])) {
-                        repo = nullptr;
-                    } else {
-                        std::string relp = relpath(&dirpath[0], &rppath[0]);
-                        git_status_file(&flags, repo, relp.c_str());
-                    }
+                if (realpath(path, &dirpath[0]) == nullptr) {
+                    git_repository_free(repo);
+                    return lst;
                 }
 
-                if (repo == nullptr) {
-                    if (repo != nullptr) {
-                        git_repository_free(repo);
-                    }
+                if (realpath(rp.c_str(), &rppath[0]) == nullptr) {
+                    git_repository_free(repo);
+                    return lst;
+                }
 
+                if (!path_prefix(&rppath[0], &dirpath[0])) {
                     repo = nullptr;
-                    rp = "";
-                    error = -1;
+                } else {
+                    std::string relp = relpath(&dirpath[0], &rppath[0]);
+                    git_status_file(&flags, repo, relp.c_str());
                 }
             }
-        }
 
-        if (error < 0) {
-            error = git_repository_discover(&root, path, 0, nullptr);
-
-            if (error == 0) {
-                error = git_repository_open(&repo, root.ptr);
-                const char *wd = git_repository_workdir(repo);
-
-                if (error < 0) {
-                    // NOLINTNEXTLINE
-                    fprintf(
-                        stderr,
-                        "Unable to open git repository at %s\n",
-                        root.ptr
-                    );
-                    repo = nullptr;
-                    rp = "";
-                } else if (wd != nullptr) {
-                    rp = wd;
-                } else {
-                    rp = "";
-                }
+            if (repo == nullptr) {
+                rp = "";
+                error = -1;
             }
         }
 
