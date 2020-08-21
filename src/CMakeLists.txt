@@ -42,7 +42,6 @@ if(USE_GIT)
 
 
         list(APPEND LIBGIT2_LIBS "z")
-        list(APPEND LIBGIT2_LIBS "iconv")
     endif()
 endif()
 

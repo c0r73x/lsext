@@ -38,6 +38,7 @@ externals/libgit2/build/Makefile: externals/libgit2/CMakeLists.txt
 		-DUSE_SSH=OFF \
 		-DUSE_HTTPS=OFF \
 		-DUSE_NTLMCLIENT=OFF \
+		-DUSE_ICONV=OFF \
 		"$(BASE_DIR)/externals/libgit2"
 
 build/Makefile: src/CMakeLists.txt
