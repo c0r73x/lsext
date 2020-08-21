@@ -39,6 +39,7 @@ externals/libgit2/build/Makefile: externals/libgit2/CMakeLists.txt
 		-DUSE_HTTPS=OFF \
 		-DUSE_NTLMCLIENT=OFF \
 		-DUSE_ICONV=OFF \
+		-DREGEX_BACKEND=builtin \
 		"$(BASE_DIR)/externals/libgit2"
 
 build/Makefile: src/CMakeLists.txt
