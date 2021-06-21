@@ -7,5 +7,7 @@ echo "$(time ls -LhFXl --color=always --group-directories-first $dir 2> /dev/nul
 echo "-- ls -LhFXl $dir --"
 echo "$(time /bin/ls -LhFXl --color=always --group-directories-first $dir 2> /dev/null)" | grep ' system '
 echo "-- /bin/ls -LhFXl $dir --"
-echo "$(time ./build/lsext -N -Lnl $dir 2> /dev/null)" | grep ' system '
+echo "$(time lsext -N -Lnl $dir 2> /dev/null)" | grep ' system '
 echo "-- lsext -N -MLnl $dir --"
+echo "$(time ./build/lsext -N -Lnl $dir 2> /dev/null)" | grep ' system '
+echo "-- build lsext -N -MLnl $dir --"

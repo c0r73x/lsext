@@ -1,3 +1,6 @@
 [submodule "externals/libgit2"]
 	path = externals/libgit2
 	url = https://github.com/romkatv/libgit2
+[submodule "externals/stb"]
+	path = externals/stb
+	url = https://github.com/nothings/stb

@@ -24,6 +24,7 @@ extern "C" {
     #include <sys/xattr.h>
     #include <unistd.h>
     #include <wordexp.h>
+    #include <stb_sprintf.h>
 
     #ifdef __linux__
         #include <linux/xattr.h>
@@ -334,13 +335,13 @@ Entry::Entry(
             struct passwd *pwp;
             if(settings.numeric_id) {
                 char uidbuf[PATH_MAX]={0};
-                snprintf(uidbuf,PATH_MAX,"%i",st->st_uid);
+                stbsp_snprintf(uidbuf,PATH_MAX,"%i",st->st_uid);
                 this->user=colorize(uidbuf,settings.color.user.user);
             } else {
                 getpwuid_r(st->st_uid, &pw, &buf[0], sizeof(buf), &pwp);
                 if (strlen(pw.pw_name) == 0) {
                     char uidbuf[PATH_MAX]={0};
-                    snprintf(uidbuf,PATH_MAX,"%i",st->st_uid);
+                    stbsp_snprintf(uidbuf,PATH_MAX,"%i",st->st_uid);
                     // NOLINTNEXTLINE
                     this->user = colorize(uidbuf,settings.color.user.user);
                 } else {
@@ -360,13 +361,13 @@ Entry::Entry(
             struct group *grp;
             if(settings.numeric_id) {
                 char gidbuf[PATH_MAX]={0};
-                snprintf(gidbuf,PATH_MAX,"%i",st->st_gid);
+                stbsp_snprintf(gidbuf,PATH_MAX,"%i",st->st_gid);
                 this->group=colorize(gidbuf,settings.color.user.group);
             } else {
                 getgrgid_r(st->st_gid, &gr, &buf[0], sizeof(buf), &grp);
                 if (strlen(gr.gr_name) == 0) {
                     char gidbuf[PATH_MAX]={0};
-                    snprintf(gidbuf,PATH_MAX,"%i",st->st_gid);
+                    stbsp_snprintf(gidbuf,PATH_MAX,"%i",st->st_gid);
                     // NOLINTNEXTLINE
                     this->group = colorize(gidbuf,settings.color.user.group);
                 } else {
@@ -953,10 +954,10 @@ std::string Entry::unitConv(float size)
 
             if (static_cast<int>(size * 10) % 10 == 0) {
                 // NOLINTNEXTLINE
-                snprintf(&csize[0], sizeof(csize), "%d", static_cast<int>(size));
+                stbsp_snprintf(&csize[0], sizeof(csize), "%d", static_cast<int>(size));
             } else {
                 // NOLINTNEXTLINE
-                snprintf(&csize[0], sizeof(csize), "%.1f", size);
+                stbsp_snprintf(&csize[0], sizeof(csize), "%.1f", size);
             }
 
             unit = colorize(&csize[0], c_unit) + // NOLINT
@@ -968,7 +969,7 @@ std::string Entry::unitConv(float size)
         size /= 1024;
     }
 
-    snprintf(&csize[0], strlen(&csize[0]), "%.2g?", size); // NOLINT
+    stbsp_snprintf(&csize[0], strlen(&csize[0]), "%.2g?", size); // NOLINT
     return &csize[0]; // NOLINT
 }
 

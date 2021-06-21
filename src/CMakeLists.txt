@@ -58,6 +58,7 @@ set(COMMON_SRC
 include_directories(
     "../src/"
     "../externals/gsl-lite/"
+    "../externals/stb/"
     ${GIT_INCLUDE_DIR}
     ${LIBGIT2_SYSTEM_INCLUDES}
     ${RE2_INCLUDE_DIR}

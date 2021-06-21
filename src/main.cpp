@@ -13,6 +13,9 @@ extern "C" {
 #include <unistd.h>
 #include <getopt.h>
 
+#define STB_SPRINTF_IMPLEMENTATION
+#include <stb_sprintf.h>
+
 #ifdef USE_OPENMP
     #include <omp.h>
 #endif
@@ -28,22 +31,22 @@ using FileList = std::vector<Entry *>;
 using DirList = std::unordered_map<std::string, FileList>;
 using FlagsList = std::unordered_map<std::string, unsigned int>;
 
-static re2::RE2 git_re("/\\.git/?$"); // NOLINT
+static re2::RE2 git_re("/\\.git/?$");
 
-settings_t settings = {0}; // NOLINT
+settings_t settings = {0};
 
 void initcolors()
 {
     const char *ls_colors = std::getenv("LS_COLORS");
 
-    std::stringstream ss; // NOLINT
+    std::stringstream ss;
     ss << ls_colors;
 
     std::string token;
 
     while (std::getline(ss, token, ':')) {
-        size_t pos = token.find('='); // NOLINT
-        colors[token.substr(0, pos)] = token.substr(pos + 1); // NOLINT
+        size_t pos = token.find('=');
+        colors[token.substr(0, pos)] = token.substr(pos + 1);
     }
 }
 
@@ -193,7 +196,6 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
                 );
 
             if (error < 0) {
-                // NOLINTNEXTLINE
                 fprintf(
                     stderr,
                     "Unable to open git repository at %s\n",
@@ -222,8 +224,8 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     if (repo != nullptr) {
         opts.pathspec.count = 1;
 
-        opts.pathspec.strings = new char *[1]; // NOLINT
-        opts.pathspec.strings[0] = const_cast<char *>(path.c_str()); // NOLINT
+        opts.pathspec.strings = new char *[1];
+        opts.pathspec.strings[0] = const_cast<char *>(path.c_str());
 
         git_status_list *statuses = nullptr;
 
@@ -261,7 +263,7 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
                const std::string &rp, FlagsList &flagsList)
 {
     struct stat st = {0};
-    std::string directory = fpath; // NOLINT
+    std::string directory = fpath;
 
     if (!directory.empty()) {
         directory += '/';
@@ -269,18 +271,16 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
 
     char fullpath[PATH_MAX] = {0};
 
-    // NOLINTNEXTLINE
-    snprintf(fullpath, PATH_MAX, "%s%s", directory.c_str(), file);
+    stbsp_snprintf(fullpath, PATH_MAX, "%s%s", directory.c_str(), file);
 
     if ((lstat(&fullpath[0], &st)) < 0) {
-        // NOLINTNEXTLINE
         fprintf(stderr, "Unable to get stats for %s\n", &fullpath[0]);
         return nullptr;
     }
 
     #ifdef S_ISLNK
 
-    if (S_ISLNK(st.st_mode) && settings.resolve_links) { // NOLINT
+    if (S_ISLNK(st.st_mode) && settings.resolve_links) {
         char target[PATH_MAX] = {};
         std::string lpath;
 
@@ -288,19 +288,17 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
             lpath = &target[0];
 
             if (lpath.at(0) != '/') {
-                // NOLINTNEXTLINE
                 lpath = std::string(dirname(&fullpath[0])) + "/" + lpath;
             }
 
             if ((lstat(lpath.c_str(), &st)) < 0) {
-                // NOLINTNEXTLINE
                 fprintf(
                     stderr,
                     "cannot access '%s': No such file or directory\n",
                     file
                 );
 
-                return new Entry(file, &fullpath[0], nullptr, 0); // NOLINT
+                return new Entry(file, &fullpath[0], nullptr, 0);
             }
 
             strncpy(&fullpath[0], lpath.c_str(), PATH_MAX - 1);
@@ -318,9 +316,8 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
 
         if (
             realpath((directory + file).c_str(), &dirpath[0]) == nullptr &&
-            !S_ISLNK(st.st_mode) // NOLINT
+            !S_ISLNK(st.st_mode)
         ) {
-            // NOLINTNEXTLINE
             fprintf(
                 stderr,
                 "cannot access '%s': No such file or directory\n",
@@ -336,8 +333,8 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
             flags = 0;
         }
 
-        if (!S_ISLNK(st.st_mode)) { // NOLINT
-            std::string fpath = &dirpath[0]; // NOLINT
+        if (!S_ISLNK(st.st_mode)) {
+            std::string fpath = &dirpath[0];
             fpath.replace(fpath.begin(), fpath.begin() + rp.length(), "");
 
             if (fpath.length() > 0) {
@@ -346,7 +343,7 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
                 }
             }
 
-            if (S_ISDIR(st.st_mode)) { // NOLINT
+            if (S_ISDIR(st.st_mode)) {
                 /*     git_status_file(&flags, repo, fpath.c_str()); */
 
                 if ((flags & GIT_STATUS_IGNORED) == 0 && fpath != ".git") {
@@ -359,8 +356,8 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
             /* } */
         }
     } else {
-        if (S_ISDIR(st.st_mode)) { // NOLINT
-            flags = dirflags(nullptr, "", directory + file); // NOLINT
+        if (S_ISDIR(st.st_mode)) {
+            flags = dirflags(nullptr, "", directory + file);
         }
     }
 
@@ -557,7 +554,7 @@ void printdir(FileList *lst)
 
     struct winsize w = { 0 };
 
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w); // NOLINT
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 
     maxlen += 1;
 
@@ -581,7 +578,6 @@ void printdir(FileList *lst)
         int outlen = 0;
 
         if ((settings.sort & SORT_TYPE) == SORT_TYPE && l->extension != ext) {
-            // NOLINTNEXTLINE
             fprintf(stdout, "\n\033[0m%s:\n", l->extension.c_str());
             ext = l->extension;
         }
@@ -589,21 +585,21 @@ void printdir(FileList *lst)
         std::string curr = l->print(maxlens, &outlen);
 
         if (outlen < maxlen) {
-            curr += std::string(maxlen - outlen, ' '); // NOLINT
+            curr += std::string(maxlen - outlen, ' ');
         }
 
         output += curr;
         current++;
 
         if (current == columns)  {
-            fprintf(stdout, "%s\033[0m\n", rtrim(output).c_str()); // NOLINT
+            fprintf(stdout, "%s\033[0m\n", rtrim(output).c_str());
             current = 0;
             output = "";
         }
     }
 
     if (current != 0)  {
-        fprintf(stdout, "%s\033[0m\n", rtrim(output).c_str()); // NOLINT
+        fprintf(stdout, "%s\033[0m\n", rtrim(output).c_str());
         output = "";
     }
 }
@@ -619,7 +615,7 @@ const char *gethome()
     struct passwd *result = getpwuid(getuid());
 
     if (result == nullptr) {
-        fprintf(stderr, "Unable to find home-directory\n"); // NOLINT
+        fprintf(stderr, "Unable to find home-directory\n");
         exit(EXIT_FAILURE);
     }
 
@@ -639,21 +635,21 @@ void loadconfig()
         const char *confdir = getenv("XDG_CONFIG_HOME");
 
         if (confdir == nullptr) {
-            snprintf(&file[0], PATH_MAX, "/.lsext.ini"); // NOLINT
+            stbsp_snprintf(&file[0], PATH_MAX, "/.lsext.ini");
             confdir = gethome();
         } else {
-            snprintf(&filename[0], PATH_MAX, "%s%s", confdir, &file[0]); // NOLINT
+            stbsp_snprintf(&filename[0], PATH_MAX, "%s%s", confdir, &file[0]);
 
             if (!exists(&filename[0])) {
-                snprintf(&file[0], PATH_MAX, "/.lsext.ini"); // NOLINT
+                stbsp_snprintf(&file[0], PATH_MAX, "/.lsext.ini");
                 confdir = gethome();
             }
         }
 
-        sprintf(&filename[0], "%s%s", confdir, &file[0]); // NOLINT
+        stbsp_snprintf(&filename[0], PATH_MAX, "%s%s", confdir, &file[0]);
 
         if (!exists(&filename[0])) {
-            snprintf(&filename[0], PATH_MAX, "./lsext.ini"); // NOLINT
+            stbsp_snprintf(&filename[0], PATH_MAX, "./lsext.ini");
         }
 
         if (exists(&filename[0])) {
@@ -899,7 +895,6 @@ option long_options[] = {
 
 void printHelp()
 {
-    // NOLINTNEXTLINE
     printf("--help\n");
 
     for (int i = 1; long_options[i].name != 0; i++) {
@@ -925,7 +920,6 @@ int main(int argc, const char *argv[])
     bool parse = true;
 
     while (parse) {
-        // NOLINTNEXTLINE
         int c = getopt_long(argc, const_cast<char **>(argv), "c:LMarfXtSAlnF:C",
                             long_options, 0);
 
@@ -1001,7 +995,6 @@ int main(int argc, const char *argv[])
                 break;
 
             case 'H':
-                // NOLINTNEXTLINE
                 printHelp();
                 return EXIT_SUCCESS;
 
@@ -1031,9 +1024,8 @@ int main(int argc, const char *argv[])
         for (uint32_t i = 0; i < count; i++) {
             struct stat st = {0};
 
-            if ((lstat(sp.at(i), &st)) < 0) {
-                // NOLINTNEXTLINE
-                fprintf(stderr, "Unable to open %s!\n", sp.at(i));
+            if ((lstat(gsl::at(sp, i), &st)) < 0) {
+                fprintf(stderr, "Unable to open %s!\n", gsl::at(sp, i));
             } else {
                 #ifdef S_ISLNK
                 char target[PATH_MAX] = {};
@@ -1041,14 +1033,12 @@ int main(int argc, const char *argv[])
 
                 char fullpath[PATH_MAX] = {0};
 
-                // NOLINTNEXTLINE
-                snprintf(fullpath, PATH_MAX, "%s", sp.at(i));
+                stbsp_snprintf(fullpath, PATH_MAX, "%s", gsl::at(sp, i));
 
-                if ((readlink(sp.at(i), &target[0], sizeof(target))) >= 0) {
+                if ((readlink(gsl::at(sp, i), &target[0], sizeof(target))) >= 0) {
                     lpath = &target[0];
 
                     if (lpath.at(0) != '/') {
-                        // NOLINTNEXTLINE
                         lpath = std::string(dirname(&fullpath[0])) + "/" + lpath;
                     }
 
@@ -1057,15 +1047,17 @@ int main(int argc, const char *argv[])
 
                 #endif
 
-                if (S_ISDIR(st.st_mode)) { // NOLINT
-                    dirs.insert(DirList::value_type(sp.at(i), listdir(sp.at(i))));
+                if (S_ISDIR(st.st_mode)) {
+                    dirs.insert(DirList::value_type(
+                        gsl::at(sp, i),
+                        listdir(gsl::at(sp, i))
+                    ));
                 } else {
                     FlagsList flagsList = {};
 
-                    // NOLINTNEXTLINE
                     #pragma omp critical
                     files.push_back(
-                        addfile("", sp.at(i), nullptr, "", flagsList)
+                        addfile("", gsl::at(sp, i), nullptr, "", flagsList)
                     );
                 }
             }
@@ -1086,7 +1078,6 @@ int main(int argc, const char *argv[])
                 path.pop_back();
             }
 
-            // NOLINTNEXTLINE
             fprintf(stdout, "\n\033[0m%s:\n", path.c_str());
         }
 
