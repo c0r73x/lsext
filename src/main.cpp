@@ -413,8 +413,15 @@ FileList listdir(const char *path)
                 if (!path_prefix(&rppath[0], &dirpath[0])) {
                     repo = nullptr;
                 } else {
+                    int ignored = 0;
                     std::string relp = relpath(&dirpath[0], &rppath[0]);
-                    git_status_file(&flags, repo, relp.c_str());
+
+                    git_status_should_ignore(&ignored, repo, relp.c_str());
+                    if (ignored == 1) {
+                        flags = GIT_STATUS_IGNORED;
+                    } else {
+                        git_status_file(&flags, repo, relp.c_str());
+                    }
                 }
             }
 
