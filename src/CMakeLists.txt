@@ -3,10 +3,10 @@ cmake_minimum_required(VERSION 3.10)
 project(lsext)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 11)
 set(CXX_STANDARD_REQUIRED)
 
-add_definitions("-Werror -Wall -pedantic -Wno-unknown-pragmas")
+add_definitions("-Werror -Wall -pedantic -Wno-unknown-pragmas -Wno-error=strict-aliasing -Wno-error=unused-variable -Wno-error=unused-function")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
@@ -43,6 +43,11 @@ if(USE_GIT)
 
         list(APPEND LIBGIT2_LIBS "z")
     endif()
+endif()
+
+if(CMAKE_C_FLAGS_RELEASE MATCHES "-O3")
+  message(STATUS "Replacing -O3 in CMAKE_C_FLAGS_RELEASE with -Ofast")
+  string(REPLACE "-O3" "-Ofast" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 endif()
 
 find_package(Iniparser REQUIRED)

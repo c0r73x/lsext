@@ -378,6 +378,7 @@ FileList listdir(const char *path)
 
         std::string rp;
         git_repository *repo = nullptr;
+        FlagsList flagsList = {};
 
         #ifdef USE_GIT
         git_buf root = { nullptr };
@@ -430,8 +431,6 @@ FileList listdir(const char *path)
                 error = -1;
             }
         }
-
-        FlagsList flagsList = {};
 
         if (repo != nullptr) {
             git_status_options opts = GIT_STATUS_OPTIONS_INIT;

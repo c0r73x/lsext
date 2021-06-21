@@ -57,10 +57,10 @@ using Segment = std::pair<std::string, int>;
 using OutputFormat = std::unordered_map<char, Segment>;
 using Lengths = std::unordered_map<char, int>;
 
-#define SORT_TYPE     0b0000'0001u
-#define SORT_ALPHA    0b0000'0010u
-#define SORT_MODIFIED 0b0000'0100u
-#define SORT_SIZE     0b0000'1000u
+#define SORT_TYPE     1
+#define SORT_ALPHA    2
+#define SORT_MODIFIED 4
+#define SORT_SIZE     8
 
 enum dateunit_t {
     DATE_SEC = 0,
