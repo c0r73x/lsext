@@ -171,9 +171,14 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     }
 
     bool isrepo = false;
+    int error = -1;
 
     git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+
+    opts.show = GIT_STATUS_SHOW_WORKDIR_ONLY;
     opts.flags = (
+                     GIT_STATUS_OPT_UPDATE_INDEX |
+                     GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
                      GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
                      GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH |
                      GIT_STATUS_OPT_EXCLUDE_SUBMODULES
@@ -181,19 +186,27 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 
     if (repo == nullptr || exists((rp  + path + "/.git").c_str())) {
         isrepo = true;
-        opts.flags = GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
+                     
+        opts.flags = GIT_STATUS_OPT_UPDATE_INDEX |
+            GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
+            GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
 
         git_buf root = { nullptr };
 
-        int error = git_repository_discover(&root, (rp + path).c_str(), 0, nullptr);
+        error = git_repository_discover(&root, (rp + path).c_str(), 0, nullptr);
 
-        if (error == 0) {
+        if (error == 0 && root.ptr != nullptr) {
             error = git_repository_open_ext(
                     &repo,
                     root.ptr,
                     GIT_REPOSITORY_OPEN_FROM_ENV,
                     nullptr
                 );
+
+            if (error == GIT_ENOTFOUND) {
+                git_buf_dispose(&root);
+                return NO_FLAGS;
+            }
 
             if (error < 0) {
                 fprintf(
@@ -228,25 +241,21 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
         opts.pathspec.strings[0] = const_cast<char *>(path.c_str());
 
         git_status_list *statuses = nullptr;
+        error = git_status_list_new(&statuses, repo, &opts);
 
-        if (git_status_list_new(&statuses, repo, &opts) == 0) {
-            size_t count = git_status_list_entrycount(statuses);
-
-            if (count > 0) {
-                flags |= GIT_ISTRACKED;
-            }
-
-            for (size_t i = 0; i < count; ++i) {
+        if (error == 0 && statuses != nullptr) {
+            for (size_t i = 0; i < git_status_list_entrycount(statuses); i++) {
                 const git_status_entry *entry = git_status_byindex(statuses, i);
+                flags |= GIT_ISTRACKED;
 
                 if (entry->status != 0) {
                     flags |= GIT_DIR_DIRTY;
                     break;
                 }
             }
-        }
 
-        git_status_list_free(statuses);
+            git_status_list_free(statuses);
+        }
 
         if (isrepo) {
             git_repository_free(repo);
@@ -488,12 +497,18 @@ FileList listdir(const char *path)
                 continue;
             }
 
-            auto f = addfile(path, &ent->d_name[0], repo, rp, flagsList);
+            #pragma omp task shared(lst, repo)
+            {
+                auto f = addfile(path, &ent->d_name[0], repo, rp, flagsList);
 
-            if (f != nullptr) {
-                lst.push_back(f);
+                if (f != nullptr) {
+                    #pragma omp critical
+                    lst.push_back(f);
+                }
             }
         }
+
+        #pragma omp taskwait
 
         #ifdef USE_GIT
 
