@@ -43,11 +43,11 @@ extern "C" {
 #define SLK_MULTIHARDLINK "mh"
 #define SLK_CLRTOEOL "cl"
 
-#define GIT_DIR_CLEAN 0b0000'0000u
-#define GIT_DIR_DIRTY 0b0000'0010u
-#define GIT_DIR_BARE  0b0000'0100u
-#define GIT_ISREPO    0b0000'1000u
-#define GIT_ISTRACKED 0b0001'0000u
+#define GIT_DIR_CLEAN 0
+#define GIT_DIR_DIRTY 2
+#define GIT_DIR_BARE  4
+#define GIT_ISREPO    8
+#define GIT_ISTRACKED 16
 
 #define NO_FLAGS ~0u
 
