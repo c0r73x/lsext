@@ -1,6 +1,6 @@
 #!/bin/sh
 
-dir="/usr/include"
+dir="/usr/local/include"
 echo "$(time ls++ -LhFXl --potsf $dir 2> /dev/null)" | grep ' system '
 echo "-- ls++ -LhFXl $dir --"
 echo "$(time ls -LhFXl --color=always --group-directories-first $dir 2> /dev/null)" | grep ' system '

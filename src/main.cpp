@@ -20,6 +20,13 @@ extern "C" {
     #include <omp.h>
 #endif
 
+#define USE_SELECTION 1
+#ifdef USE_SELECTION
+    #include <sys/mman.h>
+    #include <sys/stat.h>
+    #include <fcntl.h>
+#endif
+
 #ifdef USE_GIT
     #include <git2.h>
 #else
@@ -186,7 +193,7 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 
     if (repo == nullptr || exists((rp  + path + "/.git").c_str())) {
         isrepo = true;
-                     
+
         opts.flags = GIT_STATUS_OPT_UPDATE_INDEX |
             GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
             GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
@@ -911,6 +918,7 @@ option long_options[] = {
     {"sort-size", no_argument, nullptr, 'S'},
     {"sort-type", no_argument, nullptr, 'X'},
     {"numeric-uid-gid", no_argument, nullptr, 'n'},
+    {"selection", optional_argument, nullptr, 's'},
     {nullptr, 0, nullptr, 0}
 };
 
@@ -928,6 +936,124 @@ void printHelp()
     }
 }
 
+#ifdef USE_SELECTION
+void handle_selection(int argc, const char *argv[], DirList* dirs, FileList* files)
+{
+    if (argc - optind > 0) {
+        auto sp = gsl::make_span<const char *>(argv + optind, argv + argc);
+        std::sort(sp.begin(), sp.end(), [](const char *a, const char *b) {
+            return strlen(a) < strlen(b);
+        });
+
+        uint32_t count = argc - optind;
+
+        #pragma omp parallel for
+        for (uint32_t i = 0; i < count; i++) {
+            struct stat st = {0};
+
+            if ((lstat(gsl::at(sp, i), &st)) < 0) {
+                fprintf(stderr, "Unable to open %s!\n", gsl::at(sp, i));
+            } else {
+                #ifdef S_ISLNK
+                char target[PATH_MAX] = {};
+                std::string lpath;
+
+                char fullpath[PATH_MAX] = {0};
+
+                stbsp_snprintf(fullpath, PATH_MAX, "%s", gsl::at(sp, i));
+
+                if ((readlink(gsl::at(sp, i), &target[0], sizeof(target))) >= 0) {
+                    lpath = &target[0];
+
+                    if (lpath.at(0) != '/') {
+                        lpath = std::string(dirname(&fullpath[0])) + "/" + lpath;
+                    }
+
+                    lstat(lpath.c_str(), &st);
+                }
+                #endif
+
+                if (S_ISDIR(st.st_mode)) {
+                    // TODO: Show warning that directories should not be added to selection
+                } else {
+                    // TODO: Add to selection
+                }
+            }
+        }
+    } else {
+        if (isatty(fileno(stdout))) {
+            printf("Show fancy list");
+            /* FlagsList flagsList = {}; */
+            /**/
+            /* #pragma omp critical */
+            /* files->push_back( */
+            /*     addfile("", gsl::at(sp, i), nullptr, "", flagsList) */
+            /* ); */
+        } else {
+            printf("Show not fancy list");
+        }
+        // TODO: Show selections
+    }
+}
+#endif
+
+void list_directories(int argc, const char *argv[], DirList* dirs, FileList* files)
+{
+    if (argc - optind > 0) {
+        auto sp = gsl::make_span<const char *>(argv + optind, argv + argc);
+        std::sort(sp.begin(), sp.end(), [](const char *a, const char *b) {
+            return strlen(a) < strlen(b);
+        });
+
+        uint32_t count = argc - optind;
+
+        #pragma omp parallel for
+        for (uint32_t i = 0; i < count; i++) {
+            struct stat st = {0};
+
+            if ((lstat(gsl::at(sp, i), &st)) < 0) {
+                fprintf(stderr, "Unable to open %s!\n", gsl::at(sp, i));
+            } else {
+                #ifdef S_ISLNK
+                char target[PATH_MAX] = {};
+                std::string lpath;
+
+                char fullpath[PATH_MAX] = {0};
+
+                stbsp_snprintf(fullpath, PATH_MAX, "%s", gsl::at(sp, i));
+
+                if ((readlink(gsl::at(sp, i), &target[0], sizeof(target))) >= 0) {
+                    lpath = &target[0];
+
+                    if (lpath.at(0) != '/') {
+                        lpath = std::string(dirname(&fullpath[0])) + "/" + lpath;
+                    }
+
+                    lstat(lpath.c_str(), &st);
+                }
+
+                #endif
+
+                if (S_ISDIR(st.st_mode)) {
+                    dirs->insert(DirList::value_type(
+                        gsl::at(sp, i),
+                        listdir(gsl::at(sp, i))
+                    ));
+                } else {
+                    FlagsList flagsList = {};
+
+                    #pragma omp critical
+                    files->push_back(
+                        addfile("", gsl::at(sp, i), nullptr, "", flagsList)
+                    );
+                }
+            }
+        }
+    } else {
+        dirs->insert(DirList::value_type("./", listdir(".")));
+    }
+}
+
 int main(int argc, const char *argv[])
 {
     FileList files;
@@ -935,16 +1061,30 @@ int main(int argc, const char *argv[])
 
     settings.no_conf = false;
 
-
     loadconfig();
 
     bool parse = true;
+    #ifdef USE_SELECTION
+        bool selection = false;
+    #endif
 
     while (parse) {
-        int c = getopt_long(argc, const_cast<char **>(argv), "c:LMarfXtSAlnF:C",
-                            long_options, 0);
+        int c = getopt_long(
+            argc,
+            const_cast<char **>(argv),
+            "s::c:LMarfXtSAlnF:C",
+            long_options,
+            0
+        );
 
         switch (c) {
+            #ifdef USE_SELECTION
+            case 's':
+                selection = true;
+                parse = false;
+                break;
+            #endif
+
             case 'c':
                 settings.forced_columns = std::strtol(optarg, nullptr, 10);
                 break;
@@ -1033,59 +1173,17 @@ int main(int argc, const char *argv[])
         initcolors();
     }
 
-    if (argc - optind > 0) {
-        auto sp = gsl::make_span<const char *>(argv + optind, argv + argc);
-        std::sort(sp.begin(), sp.end(), [](const char *a, const char *b) {
-            return strlen(a) < strlen(b);
-        });
-
-        uint32_t count = argc - optind;
-
-        #pragma omp parallel for
-        for (uint32_t i = 0; i < count; i++) {
-            struct stat st = {0};
-
-            if ((lstat(gsl::at(sp, i), &st)) < 0) {
-                fprintf(stderr, "Unable to open %s!\n", gsl::at(sp, i));
-            } else {
-                #ifdef S_ISLNK
-                char target[PATH_MAX] = {};
-                std::string lpath;
-
-                char fullpath[PATH_MAX] = {0};
-
-                stbsp_snprintf(fullpath, PATH_MAX, "%s", gsl::at(sp, i));
-
-                if ((readlink(gsl::at(sp, i), &target[0], sizeof(target))) >= 0) {
-                    lpath = &target[0];
-
-                    if (lpath.at(0) != '/') {
-                        lpath = std::string(dirname(&fullpath[0])) + "/" + lpath;
-                    }
-
-                    lstat(lpath.c_str(), &st);
-                }
-
-                #endif
-
-                if (S_ISDIR(st.st_mode)) {
-                    dirs.insert(DirList::value_type(
-                        gsl::at(sp, i),
-                        listdir(gsl::at(sp, i))
-                    ));
-                } else {
-                    FlagsList flagsList = {};
-
-                    #pragma omp critical
-                    files.push_back(
-                        addfile("", gsl::at(sp, i), nullptr, "", flagsList)
-                    );
-                }
-            }
-        }
+    #ifdef USE_SELECTION
+    if (selection) {
+        handle_selection(argc, argv, &dirs, &files);
     } else {
-        dirs.insert(DirList::value_type("./", listdir(".")));
+    #endif
+
+        list_directories(argc, argv, &dirs, &files);
+
+    #ifdef USE_SELECTION
     }
+    #endif
 
     if (!files.empty()) {
         printdir(&files);
