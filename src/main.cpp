@@ -937,6 +937,56 @@ void printHelp()
 }
 
 #ifdef USE_SELECTION
+void write_shared(std::string string)
+{
+    off_t length = PATH_MAX;
+    int fd = shm_open("/selection.lsext", O_CREAT | O_APPEND, 0644);
+
+    struct stat sb;
+    if(fstat(fd, &sb) == -1) {
+        fprintf(stderr, "dafuq?\n");
+        return;
+    }
+
+    off_t offset = sb.st_size;
+    printf("foo %lld\n", offset);
+
+    if (fd == -1) {
+        return;
+    }
+
+    /* u_char* ptr = (u_char*) mmap(NULL, length, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0); */
+    /* strcpy((char*)ptr, (string + "\n").c_str()); */
+
+    std::string output = string + "\n";
+    pwrite(fd, output.c_str(), output.length(), offset);
+    close(fd);
+}
+
+char** read_shared()
+{
+    /* auto sp = gsl::make_span<const char *>(argv + optind, argv + argc); */
+    int fd = shm_open("/selection.lsext", O_RDONLY, 0644);
+
+    if (fd == -1) {
+        return nullptr;
+    }
+
+    struct stat sb;
+    fstat(fd, &sb);
+
+    off_t length = sb.st_size;
+    /* u_char *ptr = (u_char*) mmap(NULL, length, PROT_READ, MAP_SHARED, fd, 0); */
+
+    char* buf = new char[length];
+    read(fd, buf, length);
+    printf("%s\n", buf);
+
+    close(fd);
+
+    return nullptr;
+}
+
 void handle_selection(int argc, const char *argv[], DirList* dirs, FileList* files)
 {
     if (argc - optind > 0) {
@@ -975,12 +1025,19 @@ void handle_selection(int argc, const char *argv[], DirList* dirs, FileList* fil
 
                 if (S_ISDIR(st.st_mode)) {
                     // TODO: Show warning that directories should not be added to selection
+                    fprintf(stderr, "todo\n");
                 } else {
-                    // TODO: Add to selection
+                    write_shared(gsl::at(sp, i));
                 }
             }
         }
     } else {
+        auto list = read_shared();
+
+        /* if (file > -1) { */
+        /*     printf("foobar\n"); */
+        /* } */
+
         if (isatty(fileno(stdout))) {
             printf("Show fancy list");
             /* FlagsList flagsList = {}; */
