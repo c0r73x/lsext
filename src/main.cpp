@@ -904,6 +904,8 @@ option long_options[] = {
     {"no-color", no_argument, nullptr, 'C'},
     {"resolve-links", no_argument, nullptr, 'L'},
     {"resolve-mounts", no_argument, nullptr, 'M'},
+    {"resolve-in-repos", no_argument, nullptr, 'g'},
+    {"resolve-repos", no_argument, nullptr, 'G'},
     {"reversed", no_argument, nullptr, 'r'},
     {"show-hidden", no_argument, nullptr, 'a'},
     {"sort-date", no_argument, nullptr, 't'},
@@ -941,7 +943,7 @@ int main(int argc, const char *argv[])
     bool parse = true;
 
     while (parse) {
-        int c = getopt_long(argc, const_cast<char **>(argv), "c:LMarfXtSAlnF:C",
+        int c = getopt_long(argc, const_cast<char **>(argv), "c:LMGgarfXtSAlnF:C",
                             long_options, 0);
 
         switch (c) {
@@ -955,6 +957,14 @@ int main(int argc, const char *argv[])
 
             case 'M':
                 settings.resolve_mounts = !settings.resolve_mounts;
+                break;
+
+            case 'g':
+                settings.resolve_in_repos = !settings.resolve_in_repos;
+                break;
+
+            case 'G':
+                settings.resolve_repos = !settings.resolve_repos;
                 break;
 
             case 'a':

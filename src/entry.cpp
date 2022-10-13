@@ -207,7 +207,7 @@ Entry::Entry(
 
         #ifdef USE_GIT
 
-        if (flags != NO_FLAGS) {
+        if (flags != NO_FLAGS && (settings.resolve_repos || settings.resolve_in_repos)) {
             std::string symbol;
             color_t color = {0};
 
@@ -552,11 +552,13 @@ Segment Entry::format(char c)
         }
 
         case 'G': {
-            #ifdef USE_GIT
-                output.first = git;
-            #else
-                output.first = "";
-            #endif
+            if (settings.resolve_repos || settings.resolve_in_repos) {
+                #ifdef USE_GIT
+                    output.first = git;
+                #else
+                    output.first = "";
+                #endif
+            }
             break;
         }
 
