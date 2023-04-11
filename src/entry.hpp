@@ -13,9 +13,9 @@
 #include <vector>
 
 extern "C" {
-    #include <iniparser.h>
-    #include <sys/stat.h>
-    #include <sys/types.h>
+#include <iniparser.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 }
 
 #define SLK_NORM "no"
@@ -385,7 +385,7 @@ starCheck:
 }
 
 template<typename... Args>
-static inline std::string fmt(const char* fmt, Args... args)
+static inline std::string fmt(const char *fmt, Args... args)
 {
     size_t size = snprintf(nullptr, 0, fmt, args...);
     std::string buf;

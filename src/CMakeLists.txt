@@ -12,6 +12,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 option(USE_OPENMP "Enable OpenMP threading" ON)
 option(USE_GIT "Enable GIT" ON)
+option(USE_TCMALLOC "Use libtcmalloc" ON)
 option(USE_DYNAMIC_LIBGIT2 "Use system libgit2" OFF)
 
 if(USE_OPENMP)
@@ -22,6 +23,17 @@ if(USE_OPENMP)
 
         set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
         set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    endif()
+endif()
+
+if(USE_TCMALLOC)
+    find_package(libtcmalloc REQUIRED)
+
+    if (TCMALLOC_FOUND)
+        add_definitions(-DUSE_TCMALLOC)
+
+        set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${TCMALLOC_C_FLAGS}")
+        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TCMALLOC_CXX_FLAGS}")
     endif()
 endif()
 
@@ -80,4 +92,5 @@ target_link_libraries(
     ${RE2_LIBRARY}
     ${INIPARSER_LIBRARIES}
     ${OpenMP_CXX_LIBRARIES}
+    ${TCMALLOC_LIBRARY}
 )
