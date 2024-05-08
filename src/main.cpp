@@ -468,11 +468,12 @@ FileList listdir(const char *path)
 
 
                         if (filePath != nullptr) {
+                            char checkpath[PATH_MAX] = {0};
                             std::string relp = rp + "/" + filePath;
 
-                            if (realpath(relp.c_str(), &dirpath[0]) != nullptr) {
+                            if (realpath(relp.c_str(), &checkpath[0]) != nullptr) {
                                 #pragma omp critical
-                                flagsList[&dirpath[0]] = status->status | GIT_ISTRACKED;
+                                flagsList[&checkpath[0]] = status->status | GIT_ISTRACKED;
                             }
                         }
                     }
