@@ -48,7 +48,7 @@ std::unordered_map<std::string, std::string> colors;
 std::unordered_map<uint8_t, std::string> uid_cache;
 std::unordered_map<uint8_t, std::string> gid_cache;
 
-std::string Entry::colorize(std::string input, color_t color)
+std::string Entry::colorize(const std::string &input, color_t color)
 {
     if (settings.colors) {
         std::string output;
@@ -88,7 +88,7 @@ uint32_t Entry::cleanlen(std::string input)
     return input.length();
 }
 
-std::string Entry::isMountpoint(char *fullpath, struct stat *st)
+std::string Entry::isMountpoint(char *fullpath, const struct stat *st)
 {
     if (settings.resolve_mounts && settings.list) {
         struct stat parent = {0};
@@ -418,7 +418,7 @@ Entry::Entry(
     postprocess();
 }
 
-std::string Entry::colorperms(std::string input)
+std::string Entry::colorperms(const std::string &input)
 {
     std::string output;
     color_t color = {0};
@@ -949,7 +949,7 @@ std::string Entry::unitConv(float size)
             if (!settings.size_number_color) {
                 c_unit = gsl::at(colors, i);
                 c_symbol = c_unit;
-            } else if (settings.size_number_color) {
+            } else {
                 c_symbol = gsl::at(colors, i);
                 c_unit = settings.color.size.number;
             }
@@ -1003,7 +1003,7 @@ DateFormat Entry::toDateFormat(const std::string &num, int unit)
     if (!settings.date_number_color) {
         c_unit = gsl::at(colors, unit);
         c_symbol = c_unit;
-    } else if (settings.date_number_color) {
+    } else {
         c_symbol = gsl::at(colors, unit);
         c_unit = settings.color.date.number;
     }
