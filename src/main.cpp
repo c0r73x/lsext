@@ -407,6 +407,7 @@ FileList listdir(const char *path)
 
         if (error == 0) {
             const char *wd = git_repository_workdir(repo);
+            unsigned int flags = 0;
 
             if (wd != nullptr) {
                 rp = wd;
@@ -429,7 +430,7 @@ FileList listdir(const char *path)
 
                     git_status_should_ignore(&ignored, repo, relp.c_str());
                     if (ignored != 1) {
-                        git_status_file(nullptr, repo, relp.c_str());
+                        git_status_file(&flags, repo, relp.c_str());
                     }
                 }
             }
