@@ -354,17 +354,9 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
                 }
             }
 
-            if (S_ISDIR(st.st_mode)) {
-                /*     git_status_file(&flags, repo, fpath.c_str()); */
-
-                if ((flags & GIT_STATUS_IGNORED) == 0 && lfpath != ".git") {
-                    flags |= dirflags(repo, rp, lfpath);
-                }
+            if (S_ISDIR(st.st_mode) && lfpath != ".git") {
+                flags |= dirflags(repo, rp, lfpath);
             }
-
-            /* } else { */
-            /*     git_status_file(&flags, repo, fpath.c_str()); */
-            /* } */
         }
     } else {
         if (S_ISDIR(st.st_mode)) {
@@ -407,7 +399,6 @@ FileList listdir(const char *path)
 
         if (error == 0) {
             const char *wd = git_repository_workdir(repo);
-            unsigned int flags = 0;
 
             if (wd != nullptr) {
                 rp = wd;
@@ -430,6 +421,7 @@ FileList listdir(const char *path)
 
                     git_status_should_ignore(&ignored, repo, relp.c_str());
                     if (ignored != 1) {
+                        unsigned int flags = 0;
                         git_status_file(&flags, repo, relp.c_str());
                     }
                 }
