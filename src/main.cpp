@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <gsl-lite.hpp>
 #include <re2/re2.h>
 
@@ -37,6 +38,8 @@ settings_t settings = {0};
 
 void initcolors()
 {
+    const char *foo = new char;
+    printf("%s\n", foo);
     const char *ls_colors = std::getenv("LS_COLORS");
 
     std::stringstream ss;
@@ -171,7 +174,7 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
     }
 
     bool isrepo = false;
-    int error = -1;
+    int error;
 
     git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
@@ -186,7 +189,7 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 
     if (repo == nullptr || exists((rp  + path + "/.git").c_str())) {
         isrepo = true;
-                     
+
         opts.flags = GIT_STATUS_OPT_UPDATE_INDEX |
             GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
             GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
@@ -291,10 +294,9 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
 
     if (S_ISLNK(st.st_mode) && settings.resolve_links) {
         char target[PATH_MAX] = {};
-        std::string lpath;
 
         if ((readlink(&fullpath[0], &target[0], sizeof(target))) >= 0) {
-            lpath = &target[0];
+            std::string lpath = &target[0];
 
             if (lpath.at(0) != '/') {
                 lpath = std::string(dirname(&fullpath[0])) + "/" + lpath;
@@ -343,26 +345,18 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
         }
 
         if (!S_ISLNK(st.st_mode)) {
-            std::string fpath = &dirpath[0];
-            fpath.replace(fpath.begin(), fpath.begin() + rp.length(), "");
+            std::string lfpath = &dirpath[0];
+            lfpath.replace(lfpath.begin(), lfpath.begin() + rp.length(), "");
 
-            if (fpath.length() > 0) {
-                while (fpath.at(0) == '/') {
-                    fpath.replace(fpath.begin(), fpath.begin() + 1, "");
+            if (lfpath.length() > 0) {
+                while (lfpath.at(0) == '/') {
+                    lfpath.replace(lfpath.begin(), lfpath.begin() + 1, "");
                 }
             }
 
-            if (S_ISDIR(st.st_mode)) {
-                /*     git_status_file(&flags, repo, fpath.c_str()); */
-
-                if ((flags & GIT_STATUS_IGNORED) == 0 && fpath != ".git") {
-                    flags |= dirflags(repo, rp, fpath);
-                }
+            if (S_ISDIR(st.st_mode) && lfpath != ".git") {
+                flags |= dirflags(repo, rp, lfpath);
             }
-
-            /* } else { */
-            /*     git_status_file(&flags, repo, fpath.c_str()); */
-            /* } */
         }
     } else {
         if (S_ISDIR(st.st_mode)) {
@@ -405,7 +399,6 @@ FileList listdir(const char *path)
 
         if (error == 0) {
             const char *wd = git_repository_workdir(repo);
-            unsigned int flags = 0;
 
             if (wd != nullptr) {
                 rp = wd;
@@ -427,9 +420,8 @@ FileList listdir(const char *path)
                     std::string relp = relpath(&dirpath[0], &rppath[0]);
 
                     git_status_should_ignore(&ignored, repo, relp.c_str());
-                    if (ignored == 1) {
-                        flags = GIT_STATUS_IGNORED;
-                    } else {
+                    if (ignored != 1) {
+                        unsigned int flags = 0;
                         git_status_file(&flags, repo, relp.c_str());
                     }
                 }
@@ -468,12 +460,12 @@ FileList listdir(const char *path)
 
 
                         if (filePath != nullptr) {
-                            char dirpath[PATH_MAX] = {0};
+                            char checkpath[PATH_MAX] = {0};
                             std::string relp = rp + "/" + filePath;
 
-                            if (realpath(relp.c_str(), &dirpath[0]) != nullptr) {
+                            if (realpath(relp.c_str(), &checkpath[0]) != nullptr) {
                                 #pragma omp critical
-                                flagsList[&dirpath[0]] = status->status | GIT_ISTRACKED;
+                                flagsList[&checkpath[0]] = status->status | GIT_ISTRACKED;
                             }
                         }
                     }
@@ -528,7 +520,7 @@ FileList listdir(const char *path)
 
 void printdir(FileList *lst)
 {
-    std::sort(lst->begin(), lst->end(), [](Entry * a, Entry * b) {
+    std::sort(lst->begin(), lst->end(), [](const Entry *a, const Entry *b) {
         if (settings.dirs_first) {
             if (a->isdir && !b->isdir) {
                 return true;
@@ -633,7 +625,7 @@ const char *gethome()
         return homedir;
     }
 
-    struct passwd *result = getpwuid(getuid());
+    const struct passwd *result = getpwuid(getuid());
 
     if (result == nullptr) {
         fprintf(stderr, "Unable to find home-directory\n");
@@ -1060,14 +1052,13 @@ int main(int argc, const char *argv[])
             } else {
                 #ifdef S_ISLNK
                 char target[PATH_MAX] = {};
-                std::string lpath;
 
                 char fullpath[PATH_MAX] = {0};
 
                 stbsp_snprintf(fullpath, PATH_MAX, "%s", gsl::at(sp, i));
 
                 if ((readlink(gsl::at(sp, i), &target[0], sizeof(target))) >= 0) {
-                    lpath = &target[0];
+                    std::string lpath = &target[0];
 
                     if (lpath.at(0) != '/') {
                         lpath = std::string(dirname(&fullpath[0])) + "/" + lpath;

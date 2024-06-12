@@ -6,6 +6,7 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include <cstdint>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -296,12 +297,12 @@ private:
     static DateFormat toDateFormat(const std::string &num, int unit);
     static DateFormat relativeTime(time_t ftime);
     static DateFormat isoTime(time_t ftime);
-    static std::string colorize(std::string input, color_t color);
-    static std::string colorperms(std::string input);
+    static std::string colorize(const std::string &input, color_t color);
+    static std::string colorperms(const std::string &input);
     static uint32_t cleanlen(std::string input);
     Segment format(char c);
 
-    std::string isMountpoint(char *fullpath, struct stat *st);
+    std::string isMountpoint(char *fullpath, const struct stat *st);
     std::string unitConv(float size);
     std::string findColor(const std::string &file);
     std::string getColor(const std::string &file, uint32_t mode);
@@ -367,7 +368,6 @@ loopStart:
     }
 
     if (*wp == '*') {
-        --wp; // NOLINT
         wl -= (wl != 0) ? 1 : 0;
     }
 
