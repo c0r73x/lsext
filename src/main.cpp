@@ -38,8 +38,6 @@ settings_t settings = {0};
 
 void initcolors()
 {
-    const char *foo = new char;
-    printf("%s\n", foo);
     const char *ls_colors = std::getenv("LS_COLORS");
 
     std::stringstream ss;
