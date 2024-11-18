@@ -1,5 +1,6 @@
 #include "entry.hpp"
 
+#include <absl/strings/string_view.h>
 #include <algorithm>
 #include <cerrno>
 #include <climits>
@@ -82,8 +83,8 @@ uint32_t Entry::cleanlen(std::string input)
     static re2::RE2 esc_re("\033\\[?[;:0-9]*m");
     static re2::RE2 uni_re("[\u0080-\uffff]+");
 
-    re2::RE2::GlobalReplace(&input, esc_re, "");
-    re2::RE2::GlobalReplace(&input, uni_re, " ");
+    re2::RE2::GlobalReplace(&input, esc_re, absl::string_view(""));
+    re2::RE2::GlobalReplace(&input, uni_re, absl::string_view(" "));
 
     return input.length();
 }
