@@ -53,7 +53,6 @@ if(USE_GIT)
         set(CMAKE_EXE_LINKER_FLAGS
             "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,/usr/local/lib"
         )
-        add_definitions(-DUSE_GIT)
 
         set (GIT_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/../externals/libgit2/includes")
         set (GIT_LIBRARY "${CMAKE_CURRENT_LIST_DIR}/../externals/libgit2/build/libgit2.a")
@@ -61,6 +60,8 @@ if(USE_GIT)
 
         list(APPEND LIBGIT2_LIBS "z")
     endif()
+
+    add_definitions(-DUSE_GIT)
 endif()
 
 if(CMAKE_C_FLAGS_RELEASE MATCHES "-O3")
