@@ -6,16 +6,19 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CXX_STANDARD_REQUIRED)
 
-set(CFLAGS_PROFILE_GEN "-flto")
-
-add_definitions("-Werror -Wall -pedantic -Wno-unknown-pragmas -Wno-error=strict-aliasing -Wno-error=unused-variable -Wno-error=unused-function")
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-
 option(USE_OPENMP "Enable OpenMP threading" ON)
 option(USE_GIT "Enable GIT" ON)
 option(USE_TCMALLOC "Use libtcmalloc" ON)
 option(USE_DYNAMIC_LIBGIT2 "Use system libgit2" OFF)
+option(USE_LTO "Enable LTO" ON)
+
+if(USE_LTO)
+    set(CFLAGS_PROFILE_GEN "-flto")
+endif()
+
+add_definitions("-Werror -Wall -pedantic -Wno-unknown-pragmas -Wno-error=strict-aliasing -Wno-error=unused-variable -Wno-error=unused-function")
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 if(USE_OPENMP)
     find_package(OpenMP REQUIRED)
@@ -47,8 +50,10 @@ if(USE_GIT)
     if(USE_DYNAMIC_LIBGIT2)
         find_package(git2 REQUIRED)
 
-        set (GIT_INCLUDE_DIR "${GIT2_INCLUDE_DIR}")
-        set (GIT_LIBRARY "${GIT2_LIBRARY}")
+        if (LIBGIT2_FOUND)
+            set (GIT_INCLUDE_DIR "${LIBGIT2_INCLUDE_DIR}")
+            set (GIT_LIBRARY "${LIBGIT2_LIBRARIES}")
+        endif()
     else()
         set(CMAKE_EXE_LINKER_FLAGS
             "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,/usr/local/lib"
@@ -72,8 +77,6 @@ endif()
 find_package(Iniparser REQUIRED)
 find_package(RE2 REQUIRED)
 
-message (${RE2_LIBRARY})
-
 set(COMMON_SRC
     "main.cpp"
     "entry.cpp"
@@ -84,7 +87,6 @@ include_directories(
     "../externals/gsl-lite/"
     "../externals/stb/"
     ${GIT_INCLUDE_DIR}
-    ${LIBGIT2_SYSTEM_INCLUDES}
     ${RE2_INCLUDE_DIR}
     ${INIPARSER_INCLUDE_DIRS}
 )
@@ -95,7 +97,6 @@ install(TARGETS ${CMAKE_PROJECT_NAME} RUNTIME DESTINATION bin)
 target_link_libraries(
     ${CMAKE_PROJECT_NAME}
     ${GIT_LIBRARY}
-    ${LIBGIT2_LIBS}
     ${RE2_LIBRARY}
     ${INIPARSER_LIBRARIES}
     ${OpenMP_CXX_LIBRARIES}

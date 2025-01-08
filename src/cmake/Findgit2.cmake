@@ -1,27 +1,57 @@
-# Find git2 Library
-#
-#  GIT2_INCLUDE_DIRS - where to find git2.h, etc.
-#  GIT2_LIBRARIES    - List of libraries when using libgit2.
-#  GIT2_FOUND        - True if libgit2 is found.
+if (LIBGIT2_LIBRARIES AND LIBGIT2_INCLUDE_DIRS)
+    # in cache already
+    set(LIBGIT2_FOUND TRUE)
+else (LIBGIT2_LIBRARIES AND LIBGIT2_INCLUDE_DIRS)
+    find_path(LIBGIT2_INCLUDE_DIR
+        NAMES
+            git2.h
+        PATHS
+            /usr/include
+            /usr/local/include
+            /opt/local/include
+            /opt/homebrew/include
+            /sw/include
+    )
 
-# GIT2_INCLUDE_PATH
-find_path(GIT2_INCLUDE_PATH NAMES git2.h)
-# GIT2_LIBRARY
-find_library(GIT2_LIBRARY NAMES git2)
+    find_library(LIBGIT2_LIBRARY
+        NAMES
+            git2
+        PATHS
+            /usr/lib
+            /usr/local/lib
+            /opt/local/lib
+            /opt/homebrew/lib
+            /sw/lib
+    )
 
-# handle the QUIETLY and REQUIRED arguments and set GIT2_FOUND to TRUE if
-# all listed variables are TRUE
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(libgit2 REQUIRED_VARS GIT2_LIBRARY GIT2_INCLUDE_PATH)
+    if (LIBGIT2_LIBRARY)
+        set(LIBGIT2_FOUND TRUE)
+    endif (LIBGIT2_LIBRARY)
 
+    set(LIBGIT2_INCLUDE_DIRS
+        ${LIBGIT2_INCLUDE_DIR}
+    )
 
-if (GIT2_FOUND)
-  set(GIT2_INCLUDE_DIR  ${GIT2_INCLUDE_PATH})
-  set(GIT2_INCLUDE_DIRS ${GIT2_INCLUDE_PATH})
-  set(GIT2_LIBRARIES    ${GIT2_LIBRARY})
-endif()
+    if (LIBGIT2_FOUND)
+        set(LIBGIT2_LIBRARIES
+            ${LIBGIT2_LIBRARIES}
+            ${LIBGIT2_LIBRARY}
+        )
+    endif (LIBGIT2_FOUND)
 
-mark_as_advanced(
-  GIT2_INCLUDE_PATH
-  GIT2_LIBRARY
-)
+    if (LIBGIT2_INCLUDE_DIRS AND LIBGIT2_LIBRARIES)
+        set(LIBGIT2_FOUND TRUE)
+    endif (LIBGIT2_INCLUDE_DIRS AND LIBGIT2_LIBRARIES)
+
+    if (LIBGIT2_FOUND)
+        if (NOT git2_FIND_QUIETLY)
+            message(STATUS "Found libgit2: ${LIBGIT2_LIBRARIES}")
+        endif (NOT git2_FIND_QUIETLY)
+    else (LIBGIT2_FOUND)
+        if (git2_FIND_REQUIRED)
+            message(FATAL_ERROR "Could not find libgit2")
+        endif (git2_FIND_REQUIRED)
+    endif (LIBGIT2_FOUND)
+
+    mark_as_advanced(LIBGIT2_INCLUDE_DIRS LIBGIT2_LIBRARIES)
+endif (LIBGIT2_LIBRARIES AND LIBGIT2_INCLUDE_DIRS)

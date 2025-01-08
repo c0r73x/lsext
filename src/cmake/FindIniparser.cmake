@@ -22,10 +22,14 @@ else (INIPARSER_LIBRARIES AND INIPARSER_INCLUDE_DIRS)
     NAMES
       iniparser.h
     PATHS
+      /usr/include/iniparser
       /usr/include/iniparser4
       /usr/include
       /usr/local/include
+      /usr/local/include/iniparser
       /opt/local/include
+      /opt/homebrew/include
+      /opt/homebrew/include/iniparser
       /sw/include
   )
 
@@ -37,6 +41,7 @@ else (INIPARSER_LIBRARIES AND INIPARSER_INCLUDE_DIRS)
       /usr/lib
       /usr/local/lib
       /opt/local/lib
+      /opt/homebrew/lib
       /sw/lib
   )
 
@@ -56,7 +61,7 @@ else (INIPARSER_LIBRARIES AND INIPARSER_INCLUDE_DIRS)
   endif (INIPARSER_FOUND)
 
   if (INIPARSER_INCLUDE_DIRS AND INIPARSER_LIBRARIES)
-     set(INIPARSER_FOUND TRUE)
+    set(INIPARSER_FOUND TRUE)
   endif (INIPARSER_INCLUDE_DIRS AND INIPARSER_LIBRARIES)
 
   if (INIPARSER_FOUND)

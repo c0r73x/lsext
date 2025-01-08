@@ -14,7 +14,7 @@
 #include <vector>
 
 extern "C" {
-#include <iniparser.h>
+#include <iniparser/iniparser.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 }
