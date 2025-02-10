@@ -4,12 +4,10 @@
 #include <algorithm>
 #include <cerrno>
 #include <climits>
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#include <locale>
 #include <unordered_map>
 
 #include <gsl-lite.hpp>

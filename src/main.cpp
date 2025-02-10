@@ -1,18 +1,14 @@
-#include <cstdio>
-#include <gsl-lite.hpp>
+// Copyright 2025 <c0r73x@gmail.com>
+
 #include <re2/re2.h>
-
-#include "entry.hpp"
-
-#include <future>
 
 extern "C" {
 #include <dirent.h>
+#include <getopt.h>
 #include <libgen.h>
 #include <pwd.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include <getopt.h>
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include <stb_sprintf.h>
@@ -27,6 +23,13 @@ extern "C" {
     using git_repository = int;
 #endif
 }
+
+#include <cstdio>
+#include <vector>
+#include <unordered_map>
+
+#include <gsl-lite.hpp>
+#include "entry.hpp"
 
 using FileList = std::vector<Entry *>;
 using DirList = std::unordered_map<std::string, FileList>;
@@ -270,7 +273,7 @@ unsigned int dirflags(git_repository *repo, std::string rp, std::string path)
 #endif
 
 Entry *addfile(const char *fpath, const char *file, git_repository *repo,
-               const std::string &rp, FlagsList &flagsList)
+               const std::string &rp, const FlagsList &flagsList)
 {
     struct stat st = {0};
     std::string directory = fpath;
@@ -337,7 +340,7 @@ Entry *addfile(const char *fpath, const char *file, git_repository *repo,
         }
 
         if (flagsList.count(&dirpath[0]) > 0) {
-            flags = flagsList[&dirpath[0]];
+            flags = flagsList.at(&dirpath[0]);
         } else {
             flags = 0;
         }
