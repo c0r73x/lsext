@@ -69,6 +69,10 @@ if(USE_GIT)
     add_definitions(-DUSE_GIT)
 endif()
 
+set(CMAKE_EXE_LINKER_FLAGS, "${CMAKE_EXEC_LINKER_FLAGS} -Wl,-fprofile-instr-generate")
+set(CMAKE_C_FLAGS_RELEASE, "-fprofile-instr-generate")
+set(CMAKE_CXX_FLAGS_RELEASE, "-fprofile-instr-generate")
+
 if(CMAKE_C_FLAGS_RELEASE MATCHES "-O3")
   message(STATUS "Replacing -O3 in CMAKE_C_FLAGS_RELEASE with -Ofast")
   string(REPLACE "-O3" "-Ofast" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")

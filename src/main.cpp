@@ -13,16 +13,16 @@ extern "C" {
 #define STB_SPRINTF_IMPLEMENTATION
 #include <stb_sprintf.h>
 
-#ifdef USE_OPENMP
-    #include <omp.h>
-#endif
-
 #ifdef USE_GIT
     #include <git2.h>
 #else
     using git_repository = int;
 #endif
 }
+
+#ifdef USE_OPENMP
+    #include <omp.h>
+#endif
 
 #include <cstdio>
 #include <vector>
