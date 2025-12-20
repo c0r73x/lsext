@@ -451,7 +451,7 @@ FileList listdir(const char *path)
                     size_t iMax = git_status_list_entrycount(list);
                     char checkpath[PATH_MAX] = {0};
 
-                    #pragma omp parallel for shared(rp, list) private(checkpath, flagsList)
+                    #pragma omp parallel for shared(rp, list, flagsList) private(checkpath)
                     for (size_t i = 0; i < iMax; ++i) {
                         const git_status_entry *status = git_status_byindex(list, i);
                         const char *filePath = (status->head_to_index != nullptr) ?
