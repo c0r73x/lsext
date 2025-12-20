@@ -449,8 +449,9 @@ FileList listdir(const char *path)
             if (realpath(rp.c_str(), &rppath[0]) != nullptr) {
                 if (git_status_list_new(&list, repo, &opts) == GIT_OK) {
                     size_t iMax = git_status_list_entrycount(list);
+                    char checkpath[PATH_MAX] = {0};
 
-                    #pragma omp parallel for
+                    #pragma omp parallel for shared(rp, list) private(checkpath, flagsList)
                     for (size_t i = 0; i < iMax; ++i) {
                         const git_status_entry *status = git_status_byindex(list, i);
                         const char *filePath = (status->head_to_index != nullptr) ?
@@ -461,7 +462,6 @@ FileList listdir(const char *path)
 
 
                         if (filePath != nullptr) {
-                            char checkpath[PATH_MAX] = {0};
                             std::string relp = rp + "/" + filePath;
 
                             if (realpath(relp.c_str(), &checkpath[0]) != nullptr) {
@@ -478,6 +478,7 @@ FileList listdir(const char *path)
 
         #endif
 
+        #pragma omp parallel shared(repo, path, dir, lst, flagsList)
         while ((ent = readdir((dir))) != nullptr) {
             if (
                 strcmp(&ent->d_name[0], ".") == 0 ||
@@ -490,18 +491,13 @@ FileList listdir(const char *path)
                 continue;
             }
 
-            #pragma omp task shared(lst, repo)
-            {
-                auto f = addfile(path, &ent->d_name[0], repo, rp, flagsList);
+            auto f = addfile(path, &ent->d_name[0], repo, rp, flagsList);
 
-                if (f != nullptr) {
-                    #pragma omp critical
-                    lst.push_back(f);
-                }
+            if (f != nullptr) {
+                #pragma omp critical
+                lst.push_back(f);
             }
         }
-
-        #pragma omp taskwait
 
         #ifdef USE_GIT
 
@@ -1036,29 +1032,39 @@ int main(int argc, const char *argv[])
         initcolors();
     }
 
+    gsl::span<const char *> sp = {};
+    const char* single[] = { "." };
+
     if (argc - optind > 0) {
-        auto sp = gsl::make_span<const char *>(argv + optind, argv + argc);
+        sp = gsl::make_span<const char *>(argv + optind, argv + argc);
         std::sort(sp.begin(), sp.end(), [](const char *a, const char *b) {
             return strlen(a) < strlen(b);
         });
+    } else {
+        sp = gsl::span<const char*>{ single };  // deduces size 1
+    }
 
-        uint32_t count = argc - optind;
+    uint32_t count = gsl::size(sp);
+    if (count > 0) {
+        char target[PATH_MAX] = {};
+        char fullpath[PATH_MAX] = {0};
+        FlagsList flagsList = {};
 
-        #pragma omp parallel for
+        struct stat st = {0};
+
+        #pragma omp parallel for shared(dirs, sp, files) private(target, fullpath, flagsList, st)
         for (uint32_t i = 0; i < count; i++) {
-            struct stat st = {0};
+            const char* curr = gsl::at(sp, i);
 
-            if ((lstat(gsl::at(sp, i), &st)) < 0) {
-                fprintf(stderr, "Unable to open %s!\n", gsl::at(sp, i));
+            if ((lstat(curr, &st)) < 0) {
+                fprintf(stderr, "Unable to open %s!\n", curr);
             } else {
                 #ifdef S_ISLNK
-                char target[PATH_MAX] = {};
 
-                char fullpath[PATH_MAX] = {0};
 
-                stbsp_snprintf(fullpath, PATH_MAX, "%s", gsl::at(sp, i));
+                stbsp_snprintf(fullpath, PATH_MAX, "%s", curr);
 
-                if ((readlink(gsl::at(sp, i), &target[0], sizeof(target))) >= 0) {
+                if ((readlink(curr, &target[0], sizeof(target))) >= 0) {
                     std::string lpath = &target[0];
 
                     if (lpath.at(0) != '/') {
@@ -1072,27 +1078,26 @@ int main(int argc, const char *argv[])
 
                 if (S_ISDIR(st.st_mode)) {
                     dirs.insert(DirList::value_type(
-                        gsl::at(sp, i),
-                        listdir(gsl::at(sp, i))
+                        curr,
+                        listdir(curr)
                     ));
                 } else {
-                    FlagsList flagsList = {};
-
-                    #pragma omp critical
                     files.push_back(
-                        addfile("", gsl::at(sp, i), nullptr, "", flagsList)
+                        addfile("", curr, nullptr, "", flagsList)
                     );
                 }
             }
         }
-    } else {
-        dirs.insert(DirList::value_type("./", listdir(".")));
     }
 
+    #pragma omp taskwait
+
     if (!files.empty()) {
+        #pragma omp single
         printdir(&files);
     }
 
+    #pragma omp single
     for (auto dir : dirs) {
         if (dirs.size() > 1 || !files.empty()) {
             std::string path = dir.first;

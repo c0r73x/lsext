@@ -78,6 +78,9 @@ if(CMAKE_C_FLAGS_RELEASE MATCHES "-O3")
   string(REPLACE "-O3" "-Ofast" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 endif()
 
+# add_compile_options(-fsanitize=thread)
+# add_link_options(-fsanitize=thread)
+
 find_package(Iniparser REQUIRED)
 find_package(RE2 REQUIRED)
 
