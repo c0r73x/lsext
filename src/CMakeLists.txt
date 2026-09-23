@@ -8,7 +8,7 @@ set(CXX_STANDARD_REQUIRED)
 
 option(USE_OPENMP "Enable OpenMP threading" ON)
 option(USE_GIT "Enable GIT" ON)
-option(USE_TCMALLOC "Use libtcmalloc" ON)
+option(USE_TCMALLOC "Use libtcmalloc (adds ~0.8ms startup, no measurable gain)" OFF)
 option(USE_DYNAMIC_LIBGIT2 "Use system libgit2" OFF)
 option(USE_LTO "Enable LTO" ON)
 

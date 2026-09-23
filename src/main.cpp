@@ -48,6 +48,11 @@ using DirList = std::vector<std::pair<std::string, FileList>>;
 // Index entries below the listed directory needed per extra git status
 // pass, each pass opens its own repository and loads the index again.
 #define GIT_ENTRIES_PER_PASS 4000
+// Threads for checking repositories. More did not help, neither warm nor
+// with the page cache evicted (8 beat 16, 32 and 64 on 348 repos).
+#ifndef IO_THREADS
+#define IO_THREADS 8
+#endif
 
 static int teamSize(size_t work)
 {
@@ -285,21 +290,44 @@ static unsigned int repoflags(const std::string &path,
         }
     }
 
-    // submodules included, a modified submodule makes the repo dirty
-    // just like in git status
-    git_status_options opts = GIT_STATUS_OPTIONS_INIT;
-    opts.show = GIT_STATUS_SHOW_WORKDIR_ONLY;
-    opts.flags = 0;
+    // Index to work tree diff that is aborted at the first change, a
+    // dirty repository does not need to be walked any further. Clean
+    // ones still need the full walk, that is what git status does too.
+    git_index *index = nullptr;
 
-    git_status_list *statuses = nullptr;
+    if (git_repository_index(&index, repo) == 0) {
+        git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+        // Submodules only count as dirty when their HEAD moved; walking
+        // their work trees too made repos with many submodules take
+        // seconds. Listing inside the superproject still checks every
+        // direct submodule fully (see ctx.gitlinks).
+        opts.ignore_submodules = GIT_SUBMODULE_IGNORE_DIRTY;
+        // Write refreshed stat data back like git status does. Otherwise
+        // every file whose stat data went stale (touched, checked out,
+        // rebuilt) is read and hashed again on every run, which is what
+        // made cold listings of many repositories slow. If the index is
+        // locked the write is simply skipped.
+        opts.flags = GIT_DIFF_UPDATE_INDEX;
+        opts.notify_cb = [](const git_diff *, const git_diff_delta *,
+                            const char *, void *) -> int {
+            return GIT_EUSER;
+        };
 
-    if (git_status_list_new(&statuses, repo, &opts) == 0) {
-        // without INCLUDE_UNMODIFIED only changed entries are listed
-        if (git_status_list_entrycount(statuses) > 0) {
+        git_diff *diff = nullptr;
+        int error = git_diff_index_to_workdir(&diff, repo, index, &opts);
+
+        if (error == GIT_EUSER) {
             flags |= GIT_DIR_DIRTY;
+        } else if (diff != nullptr) {
+            // also reached when only writing the index back failed
+            if (git_diff_num_deltas(diff) > 0) {
+                flags |= GIT_DIR_DIRTY;
+            }
         }
 
-        git_status_list_free(statuses);
+        git_diff_free(diff);
+
+        git_index_free(index);
     }
 
     git_repository_free(repo);
@@ -525,6 +553,7 @@ FileList listdir(const char *path)
     }
 
     const size_t nitems = items.size();
+    std::vector<char> isrepo(count, 0);
     #endif
 
     #pragma omp parallel num_threads(threads)
@@ -596,24 +625,17 @@ FileList listdir(const char *path)
             #ifdef USE_GIT
             if (e->mode != 0) {
                 const std::string &name = names[i];
-                unsigned int flags = NO_FLAGS;
+                unsigned int flags = inrepo ? ctx.flags[i] : NO_FLAGS;
 
-                if (inrepo) {
-                    flags = ctx.flags[i];
+                // nested repositories are checked below (submodules were
+                // handled with the status passes)
+                const bool submodule = flags != NO_FLAGS &&
+                                       (flags & GIT_ISSUBMODULE) != 0;
 
-                    // submodules were handled with the status passes
-                    if (e->isdir && settings.resolve_repos &&
-                            (flags & GIT_ISSUBMODULE) == 0 &&
-                            name != ".git" && hasDotGit(dfd, name)) {
-                        unsigned int rf = repoflags(dirprefix + name);
-
-                        if (rf != NO_FLAGS) {
-                            flags |= rf;
-                        }
-                    }
-                } else if (e->isdir && settings.resolve_repos &&
-                           hasDotGit(dfd, name)) {
-                    flags = repoflags(dirprefix + name);
+                if (e->isdir && settings.resolve_repos && !submodule &&
+                        name != ".git" && hasDotGit(dfd, name)) {
+                    isrepo[i] = 1;
+                    continue;
                 }
 
                 e->setGit(flags);
@@ -623,6 +645,30 @@ FileList listdir(const char *path)
             e->postprocess();
         }
     }
+
+    #ifdef USE_GIT
+    std::vector<size_t> repojobs;
+
+    for (size_t i = 0; i < count; i++) {
+        if (isrepo[i] != 0) {
+            repojobs.push_back(i);
+        }
+    }
+    #pragma omp parallel for schedule(dynamic, 1) num_threads(std::max<size_t>(1, std::min<size_t>(repojobs.size(), IO_THREADS)))
+    for (size_t j = 0; j < repojobs.size(); j++) {
+        const size_t i = repojobs[j];
+        Entry *e = lst[i];
+        unsigned int flags = inrepo ? ctx.flags[i] : NO_FLAGS;
+        unsigned int rf = repoflags(dirprefix + names[i]);
+
+        if (rf != NO_FLAGS) {
+            flags = (flags == NO_FLAGS) ? rf : (flags | rf);
+        }
+
+        e->setGit(flags);
+        e->postprocess();
+    }
+    #endif
 
     #ifdef USE_GIT
     for (auto *repo : repos) {
