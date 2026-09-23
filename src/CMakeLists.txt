@@ -13,7 +13,7 @@ option(USE_DYNAMIC_LIBGIT2 "Use system libgit2" OFF)
 option(USE_LTO "Enable LTO" ON)
 
 if(USE_LTO)
-    set(CFLAGS_PROFILE_GEN "-flto")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif()
 
 add_definitions("-Werror -Wall -pedantic -Wno-unknown-pragmas -Wno-error=strict-aliasing -Wno-error=unused-variable -Wno-error=unused-function")
@@ -26,8 +26,8 @@ if(USE_OPENMP)
     if (OPENMP_FOUND)
         add_definitions(-DUSE_OPENMP)
 
-        set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} ${CFLAGS_PROFILE_GEN}")
-        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} ${CFLAGS_PROFILE_GEN}")
+        set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     endif()
 else()
     set (OpenMP_CXX_LIBRARIES "")
@@ -39,8 +39,8 @@ if(USE_TCMALLOC)
     if (TCMALLOC_FOUND)
         add_definitions(-DUSE_TCMALLOC)
 
-        set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${TCMALLOC_C_FLAGS} ${CFLAGS_PROFILE_GEN}")
-        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TCMALLOC_CXX_FLAGS} ${CFLAGS_PROFILE_GEN}")
+        set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${TCMALLOC_C_FLAGS}")
+        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TCMALLOC_CXX_FLAGS}")
     endif()
 else()
     set (TCMALLOC_LIBRARY "")
@@ -59,30 +59,24 @@ if(USE_GIT)
             "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,/usr/local/lib"
         )
 
-        set (GIT_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/../externals/libgit2/includes")
+        set (GIT_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/../externals/libgit2/include")
         set (GIT_LIBRARY "${CMAKE_CURRENT_LIST_DIR}/../externals/libgit2/build/libgit2.a")
 
 
-        list(APPEND LIBGIT2_LIBS "z")
+        find_package(Threads REQUIRED)
+        list(APPEND LIBGIT2_LIBS "z" Threads::Threads)
+
+        # the bundled fork has extra speed options (index checksum, ...)
+        add_definitions(-DLSEXT_GIT_FORK)
     endif()
 
     add_definitions(-DUSE_GIT)
-endif()
-
-set(CMAKE_EXE_LINKER_FLAGS, "${CMAKE_EXEC_LINKER_FLAGS} -Wl,-fprofile-instr-generate")
-set(CMAKE_C_FLAGS_RELEASE, "-fprofile-instr-generate")
-set(CMAKE_CXX_FLAGS_RELEASE, "-fprofile-instr-generate")
-
-if(CMAKE_C_FLAGS_RELEASE MATCHES "-O3")
-  message(STATUS "Replacing -O3 in CMAKE_C_FLAGS_RELEASE with -Ofast")
-  string(REPLACE "-O3" "-Ofast" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 endif()
 
 # add_compile_options(-fsanitize=thread)
 # add_link_options(-fsanitize=thread)
 
 find_package(Iniparser REQUIRED)
-find_package(RE2 REQUIRED)
 
 set(COMMON_SRC
     "main.cpp"
@@ -94,7 +88,6 @@ include_directories(
     "../externals/gsl-lite/"
     "../externals/stb/"
     ${GIT_INCLUDE_DIR}
-    ${RE2_INCLUDE_DIR}
     ${INIPARSER_INCLUDE_DIRS}
 )
 
@@ -104,7 +97,7 @@ install(TARGETS ${CMAKE_PROJECT_NAME} RUNTIME DESTINATION bin)
 target_link_libraries(
     ${CMAKE_PROJECT_NAME}
     ${GIT_LIBRARY}
-    ${RE2_LIBRARY}
+    ${LIBGIT2_LIBS}
     ${INIPARSER_LIBRARIES}
     ${OpenMP_CXX_LIBRARIES}
     ${TCMALLOC_LIBRARY}

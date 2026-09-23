@@ -18,14 +18,13 @@ Feel free to share your screenshots and configs here, [Screenshots and config](h
 | Name        |    Required        |   |
 | ------------- |:-------------:| -----:|
 | Iniparser     | **Required** | Recommended version 4.x, min 3.1 |
-| re2 | **Required** | |
 | OpenMP     | Optional | **Enabled by default** |
 | libgit2     | Optional | version 0.28.0+ **Enabled by default** |
 
 
 ## Build dependencies
 CMake    
-C++11 compatible compiler 
+C++17 compatible compiler 
 
 ## Usage
 

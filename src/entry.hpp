@@ -2,15 +2,12 @@
 #ifndef ENTRY_HPP_
 #define ENTRY_HPP_
 
-#include <algorithm>
-#include <climits>
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
-#include <sstream>
+#include <ctime>
 #include <string>
-#include <unordered_map>
-#include <vector>
+#include <string_view>
 #include <vector>
 
 extern "C" {
@@ -44,19 +41,22 @@ extern "C" {
 #define SLK_MULTIHARDLINK "mh"
 #define SLK_CLRTOEOL "cl"
 
-#define GIT_DIR_CLEAN 0
-#define GIT_DIR_DIRTY 2
-#define GIT_DIR_BARE  4
-#define GIT_ISREPO    8
-#define GIT_ISTRACKED 16
+// Kept above the git_status_t bits so they can be OR:ed with a status
+// without colliding (git_status_t uses bits 0-15).
+#define GIT_DIR_CLEAN 0u
+#define GIT_DIR_DIRTY (1u << 24u)
+#define GIT_DIR_BARE  (1u << 25u)
+#define GIT_ISREPO    (1u << 26u)
+#define GIT_ISTRACKED (1u << 27u)
+#define GIT_ISSUBMODULE (1u << 28u)
 
 #define NO_FLAGS ~0u
 
 using DateFormat = std::pair<std::string, std::string>;
 
 using Segment = std::pair<std::string, int>;
-using OutputFormat = std::unordered_map<char, Segment>;
-using Lengths = std::unordered_map<char, int>;
+using OutputFormat = std::vector<Segment>; // indexed by format slot
+using Lengths = std::vector<int>;          // indexed by format slot
 
 #define SORT_TYPE     1
 #define SORT_ALPHA    2
@@ -248,24 +248,48 @@ struct settings_t { // NOLINT
 };
 
 extern settings_t settings;
-extern std::unordered_map<std::string, std::string> colors;
+
+// The format string parsed once instead of once per entry.
+struct FormatToken {
+    char c;       // literal character or format specifier
+    bool literal;
+    bool right;   // @^x, right aligned
+    int slot;     // index into Entry::processed / Lengths
+};
+
+struct ParsedFormat {
+    std::vector<FormatToken> tokens;
+    std::string slots;   // one specifier char per slot
+    int literal_len = 0; // visible length of all literal characters
+
+    bool uses(char c) const
+    {
+        return slots.find(c) != std::string::npos;
+    }
+};
+
+extern ParsedFormat parsed_format;
+extern time_t now;
+
+void parseFormat(const std::string &format);
+void initColors();
+void initTables();
 
 class Entry
 {
 public:
     Entry(
         const std::string &file,
-        char *fullpath,
-        struct stat *st,
-        unsigned int flags
+        const char *fullpath,
+        const struct stat *st,
+        const struct stat *parent
     );
 
-    Entry(const Entry &) = default;
-    virtual ~Entry() = default;
-
+    Entry(const Entry &) = delete;
     Entry(Entry &&other) = delete;
     Entry &operator=(const Entry &other) = delete;
     Entry &operator=(Entry &&other) = delete;
+    ~Entry() = default;
 
     std::string file;
     std::string extension;
@@ -278,7 +302,11 @@ public:
     uint32_t mode;
     int totlen;
 
-    std::string print(Lengths maxlens, int *outlen);
+    void setGit(unsigned int flags);
+    void postprocess();
+    void print(std::string &output, const Lengths &maxlens) const;
+
+    static std::string colorize(std::string_view input, color_t color);
 
     OutputFormat processed;
 private:
@@ -297,21 +325,19 @@ private:
     static DateFormat toDateFormat(const std::string &num, int unit);
     static DateFormat relativeTime(time_t ftime);
     static DateFormat isoTime(time_t ftime);
-    static std::string colorize(const std::string &input, color_t color);
-    static std::string colorperms(const std::string &input);
-    static uint32_t cleanlen(std::string input);
-    Segment format(char c);
+    static std::string colorperms(std::string_view input);
+    static uint32_t cleanlen(std::string_view input);
+    std::string format(char c, DateFormat *rel, DateFormat *iso);
 
-    std::string isMountpoint(char *fullpath, const struct stat *st);
-    std::string unitConv(float size);
-    std::string findColor(const std::string &file);
-    std::string getColor(const std::string &file, uint32_t mode);
+    std::string isMountpoint(const struct stat *st, const struct stat *parent);
+    static std::string unitConv(float size);
+    static const std::string &findColor(const char *type);
+    static const std::string &findNameColor(const std::string &file);
+    static const std::string &getColor(const std::string &file, uint32_t mode);
     std::string lsPerms(uint32_t mode);
-    std::string chmodPerms(uint32_t mode);
+    static std::string chmodPerms(uint32_t mode);
 
     char fileHasAcl();
-
-    void postprocess();
 };
 
 static inline const char *cpp11_getstring(dictionary *d, const char *key,
@@ -326,73 +352,32 @@ static inline bool exists(const char *name)
     return (stat(name, &buffer) == 0);
 }
 
-static inline std::string rtrim(const std::string &s)
+// Glob match supporting '*', iterative with single backtrack point.
+static inline bool wildcmp(const char *w, const char *s)
 {
-    std::string output = s;
-    output.erase(std::find_if(output.rbegin(), output.rend(), [](int ch) {
-        return (std::isspace(ch) == 0);
-    }).base(), output.end());
+    const char *star = nullptr;
+    const char *ss = s;
 
-    return output;
-}
-
-static inline bool wildcmp(const char *w, const char *s, uint8_t wl,
-                           uint8_t sl)
-{
-    const char *wp = &w[wl]; // NOLINT
-    const char *sp = &s[sl]; // NOLINT
-
-    bool star = false;
-
-loopStart:
-
-    for (; *sp; --sp, --wp, --wl, --sl) { // NOLINT
-        switch (*wp) {
-            case '*':
-                star = true;
-                sp = &s[sl], wp = &w[wl]; // NOLINT
-
-                if (wl == 0) { // NOLINT
-                    return true;
-                }
-
-                goto loopStart;
-
-            default:
-                if (*sp != *wp) {
-                    goto starCheck;
-                }
-
-                break;
+    while (*s != '\0') {
+        if (*w == '*') {
+            star = w++;
+            ss = s;
+        } else if (*w == *s) {
+            w++;
+            s++;
+        } else if (star != nullptr) {
+            w = star + 1;
+            s = ++ss;
+        } else {
+            return false;
         }
     }
 
-    if (*wp == '*') {
-        wl -= (wl != 0) ? 1 : 0;
+    while (*w == '*') {
+        w++;
     }
 
-    return (wl == 0);
-
-starCheck:
-
-    if (!star) {
-        return false;
-    }
-
-    sp--; // NOLINT
-    sl -= (sl != 0) ? 1 : 0;
-    goto loopStart;
-}
-
-template<typename... Args>
-static inline std::string fmt(const char *fmt, Args... args)
-{
-    size_t size = snprintf(nullptr, 0, fmt, args...);
-    std::string buf;
-    buf.reserve(size + 1);
-    buf.resize(size);
-    snprintf(&buf[0], size + 1, fmt, args...);
-    return buf;
+    return *w == '\0';
 }
 
 #endif // ENTRY_HPP_
