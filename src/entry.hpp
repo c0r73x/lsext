@@ -136,7 +136,7 @@ struct settings_t { // NOLINT
             color_t other;
         } date;
 
-        // file name color for recently modified entries, fg/bg -1 = off
+        // date color for recently modified/created entries, fg/bg -1 = off
         struct recent_t {
             color_t minute; // modified within the last minute
             color_t day;    // modified within the last day
@@ -351,11 +351,16 @@ private:
     std::string color;
     std::string target_color;
 
+    // date color when recently modified, nullptr = normal date colors
+    const color_t *recent = nullptr;
+
     static char fileTypeLetter(uint32_t mode);
-    static DateFormat toDateFormat(const std::string &num, int unit);
-    static DateFormat relativeTime(time_t ftime);
-    static DateFormat isoTime(time_t ftime);
-    static std::string humanTime(time_t ftime);
+    static DateFormat toDateFormat(const std::string &num, int unit,
+                                   const color_t *recent);
+    static DateFormat relativeTime(time_t ftime, const color_t *recent);
+    static DateFormat isoTime(time_t ftime, const color_t *recent);
+    static std::string humanTime(time_t ftime, const color_t *recent);
+    static const color_t *recentColor(int64_t age);
     static std::string colorperms(std::string_view input);
     static uint32_t cleanlen(std::string_view input);
     std::string format(char c, DateFormat *rel, DateFormat *iso);

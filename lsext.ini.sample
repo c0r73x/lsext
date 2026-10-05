@@ -37,7 +37,7 @@ resolve_in_repos = 1
 ; default sort method 0 = Alpha, 1 = Modified, 2 = Size
 sort = 0
 
-; age limits for the recent_min / recent_day name colors in [colors],
+; age limits for the recent_min / recent_day date colors in [colors],
 ; seconds or with a unit: s, m, h, d, w, y
 recent_min_age = 1m
 recent_day_age = 1d
@@ -97,9 +97,10 @@ date_mon_fg = 2
 date_week_fg = 2
 date_year_fg = 2
 
-; color the file name of entries modified within recent_min_age /
+; color the modification date (@r @t @D @T) of entries modified, and
+; the creation date (@c) of entries created, within recent_min_age /
 ; recent_day_age (see [settings], default 1 minute / 1 day)
-; (-1 or unset = use the normal LS_COLORS color)
+; (-1 or unset = use the normal date colors)
 ; recent_min_fg = 9
 ; recent_day_fg = 11
 

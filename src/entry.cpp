@@ -349,6 +349,27 @@ void initTables()
     }
 }
 
+// date color for something this many seconds old, nullptr = not recent
+const color_t *Entry::recentColor(int64_t age)
+{
+    if (!settings.colors) {
+        return nullptr;
+    }
+
+    const color_t &minute = settings.color.recent.minute;
+    const color_t &day = settings.color.recent.day;
+
+    if (age < settings.recent_min_age && (minute.fg >= 0 || minute.bg >= 0)) {
+        return &minute;
+    }
+
+    if (age < settings.recent_day_age && (day.fg >= 0 || day.bg >= 0)) {
+        return &day;
+    }
+
+    return nullptr;
+}
+
 std::string Entry::colorize(std::string_view input, color_t color)
 {
     if (settings.colors) {
@@ -613,22 +634,7 @@ Entry::Entry(
 
         #endif /* S_ISLNK */
 
-        // Appended after the LS_COLORS color instead of replacing it, so
-        // anything that color carries (like an icon) keeps its look and
-        // only the name itself gets the recent color.
-        if (settings.colors) {
-            const int64_t age = now - st->st_mtime;
-            const color_t &minute = settings.color.recent.minute;
-            const color_t &day = settings.color.recent.day;
-
-            if (age < settings.recent_min_age &&
-                    (minute.fg >= 0 || minute.bg >= 0)) {
-                appendEscape(this->color, minute);
-            } else if (age < settings.recent_day_age &&
-                       (day.fg >= 0 || day.bg >= 0)) {
-                appendEscape(this->color, day);
-            }
-        }
+        this->recent = recentColor(now - st->st_mtime);
 
         if (parsed_format.uses('u') || parsed_format.uses('U')) {
             this->user = resolveId(st->st_uid, false);
@@ -832,7 +838,7 @@ std::string Entry::format(char c, DateFormat *rel, DateFormat *iso)
         case 'r':
         case 't': {
             if (rel->first.empty() && rel->second.empty()) {
-                *rel = relativeTime(modified);
+                *rel = relativeTime(modified, recent);
             }
 
             output = (c == 'r') ? rel->first : rel->second;
@@ -842,7 +848,7 @@ std::string Entry::format(char c, DateFormat *rel, DateFormat *iso)
         case 'D':
         case 'T': {
             if (iso->first.empty() && iso->second.empty()) {
-                *iso = isoTime(modified);
+                *iso = isoTime(modified, recent);
             }
 
             output = (c == 'D') ? iso->first : iso->second;
@@ -850,7 +856,7 @@ std::string Entry::format(char c, DateFormat *rel, DateFormat *iso)
         }
 
         case 'c': {
-            output = humanTime(created);
+            output = humanTime(created, recentColor(now - created));
             break;
         }
 
@@ -1277,7 +1283,8 @@ std::string Entry::unitConv(float size)
     return &csize[0]; // NOLINT
 }
 
-DateFormat Entry::toDateFormat(const std::string &num, int unit)
+DateFormat Entry::toDateFormat(const std::string &num, int unit,
+                               const color_t *recent)
 {
     color_t c_symbol = {0};
     color_t c_unit = {0};
@@ -1310,13 +1317,18 @@ DateFormat Entry::toDateFormat(const std::string &num, int unit)
         c_unit = settings.color.date.number;
     }
 
+    if (recent != nullptr) {
+        c_unit = *recent;
+        c_symbol = *recent;
+    }
+
     return DateFormat(
                colorize(num, c_unit),
                colorize(*gsl::at(units, unit), c_symbol) // NOLINT
            );
 }
 
-DateFormat Entry::isoTime(time_t ftime)
+DateFormat Entry::isoTime(time_t ftime, const color_t *recent)
 {
     DateFormat output;
     struct tm tm = {};
@@ -1326,11 +1338,16 @@ DateFormat Entry::isoTime(time_t ftime)
 
     stbsp_snprintf(&buf[0], sizeof(buf), "%d-%02d-%02d",
                    tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
-    output.first = colorize(&buf[0], settings.color.date.year);
+    output.first = colorize(&buf[0], recent != nullptr ?
+                            *recent : settings.color.date.year);
 
     auto color = settings.color.date.number;
     if (!settings.date_number_color) {
         color = settings.color.date.year;
+    }
+
+    if (recent != nullptr) {
+        color = *recent;
     }
 
     stbsp_snprintf(&buf[0], sizeof(buf), "%02d:%02d", tm.tm_hour, tm.tm_min);
@@ -1340,7 +1357,7 @@ DateFormat Entry::isoTime(time_t ftime)
 }
 
 // "5 mins ago" style, or a date once older than created_date_after
-std::string Entry::humanTime(time_t ftime)
+std::string Entry::humanTime(time_t ftime, const color_t *recent)
 {
     if (ftime == 0) {
         return colorize("-", settings.color.date.other);
@@ -1358,11 +1375,13 @@ std::string Entry::humanTime(time_t ftime)
             buf[0] = '\0';
         }
 
-        return colorize(&buf[0], settings.color.date.other);
+        return colorize(&buf[0], recent != nullptr ?
+                        *recent : settings.color.date.other);
     }
 
     if (delta < 1) {
-        return colorize(settings.symbols.human.now, settings.color.date.sec);
+        return colorize(settings.symbols.human.now, recent != nullptr ?
+                        *recent : settings.color.date.sec);
     }
 
     struct unit_t {
@@ -1389,8 +1408,8 @@ std::string Entry::humanTime(time_t ftime)
     }
 
     const int64_t n = delta / units[u].seconds;
-    const color_t unit_color = units[u].color;
-    const color_t num_color = settings.date_number_color ?
+    const color_t unit_color = recent != nullptr ? *recent : units[u].color;
+    const color_t num_color = settings.date_number_color && recent == nullptr ?
                               settings.color.date.number : unit_color;
 
     std::string words = *units[u].word;
@@ -1408,7 +1427,7 @@ std::string Entry::humanTime(time_t ftime)
            colorize(words, unit_color);
 }
 
-DateFormat Entry::relativeTime(time_t ftime)
+DateFormat Entry::relativeTime(time_t ftime, const color_t *recent)
 {
     int64_t delta = now - ftime;
     int64_t rel = delta;
@@ -1418,64 +1437,64 @@ DateFormat Entry::relativeTime(time_t ftime)
     }
 
     if (delta < 10) {
-        return toDateFormat("<", DATE_SEC); // NOLINT
+        return toDateFormat("<", DATE_SEC, recent); // NOLINT
     }
 
     if (delta < 45) {
-        return toDateFormat(std::to_string(rel), DATE_SEC);
+        return toDateFormat(std::to_string(rel), DATE_SEC, recent);
     }
 
     rel /= 60;
 
     if (delta < 60) {
-        return toDateFormat("<", DATE_MIN); // NOLINT
+        return toDateFormat("<", DATE_MIN, recent); // NOLINT
     }
 
     if (delta < 2700) {
-        return toDateFormat(std::to_string(rel), DATE_MIN);
+        return toDateFormat(std::to_string(rel), DATE_MIN, recent);
     }
 
     rel /= 60;
 
     if (delta < 3600) {
-        return toDateFormat("<", DATE_HOUR); // NOLINT
+        return toDateFormat("<", DATE_HOUR, recent); // NOLINT
     }
 
     if (delta < 64800) {
-        return toDateFormat(std::to_string(rel), DATE_HOUR);
+        return toDateFormat(std::to_string(rel), DATE_HOUR, recent);
     }
 
     rel /= 24;
 
     if (delta < 86400) {
-        return toDateFormat("<", DATE_DAY); // NOLINT
+        return toDateFormat("<", DATE_DAY, recent); // NOLINT
     }
 
     if (delta < 453600) {
-        return toDateFormat(std::to_string(rel), DATE_DAY);
+        return toDateFormat(std::to_string(rel), DATE_DAY, recent);
     }
 
     rel /= 7;
 
     if (delta < 604800) {
-        return toDateFormat("<", DATE_WEEK); // NOLINT
+        return toDateFormat("<", DATE_WEEK, recent); // NOLINT
     }
 
     if (delta < 1814400) {
-        return toDateFormat(std::to_string(rel), DATE_WEEK);
+        return toDateFormat(std::to_string(rel), DATE_WEEK, recent);
     }
 
     rel /= 4;
 
     if (delta < 2419200) {
-        return toDateFormat("<", DATE_MON); // NOLINT
+        return toDateFormat("<", DATE_MON, recent); // NOLINT
     }
 
     if (delta < 29030400) {
-        return toDateFormat(std::to_string(rel), DATE_MON);
+        return toDateFormat(std::to_string(rel), DATE_MON, recent);
     }
 
     rel /= 12;
 
-    return toDateFormat(std::to_string(rel), DATE_YEAR);
+    return toDateFormat(std::to_string(rel), DATE_YEAR, recent);
 }
