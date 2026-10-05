@@ -15,6 +15,7 @@
 
 extern "C" {
     #include <dirent.h>
+    #include <fcntl.h>
     #include <grp.h>
     #include <libgen.h>
     #include <pwd.h>
@@ -562,6 +563,7 @@ Entry::Entry(
         this->group = colorize("????", settings.color.user.group); // NOLINT
         this->mode = 0;
         this->modified = 0;
+        this->created = 0;
         this->bsize = 0;
 
         this->color = findColor(SLK_ORPHAN);
@@ -611,6 +613,23 @@ Entry::Entry(
 
         #endif /* S_ISLNK */
 
+        // Appended after the LS_COLORS color instead of replacing it, so
+        // anything that color carries (like an icon) keeps its look and
+        // only the name itself gets the recent color.
+        if (settings.colors) {
+            const int64_t age = now - st->st_mtime;
+            const color_t &minute = settings.color.recent.minute;
+            const color_t &day = settings.color.recent.day;
+
+            if (age < settings.recent_min_age &&
+                    (minute.fg >= 0 || minute.bg >= 0)) {
+                appendEscape(this->color, minute);
+            } else if (age < settings.recent_day_age &&
+                       (day.fg >= 0 || day.bg >= 0)) {
+                appendEscape(this->color, day);
+            }
+        }
+
         if (parsed_format.uses('u') || parsed_format.uses('U')) {
             this->user = resolveId(st->st_uid, false);
         }
@@ -620,6 +639,23 @@ Entry::Entry(
         }
 
         this->modified = st->st_mtime;
+        this->created = 0;
+
+        // birth time is not in struct stat, only fetched when shown
+        if (parsed_format.uses('c')) {
+            #ifdef __linux__
+            struct statx stx = {};
+
+            if (statx(AT_FDCWD, fullpath, AT_SYMLINK_NOFOLLOW,
+                      STATX_BTIME, &stx) == 0 &&
+                    (stx.stx_mask & STATX_BTIME) != 0) {
+                this->created = stx.stx_btime.tv_sec;
+            }
+            #elif __APPLE__
+            this->created = st->st_birthtime;
+            #endif
+        }
+
         this->bsize = st->st_size;
         this->mode = st->st_mode;
 
@@ -810,6 +846,11 @@ std::string Entry::format(char c, DateFormat *rel, DateFormat *iso)
             }
 
             output = (c == 'D') ? iso->first : iso->second;
+            break;
+        }
+
+        case 'c': {
+            output = humanTime(created);
             break;
         }
 
@@ -1296,6 +1337,75 @@ DateFormat Entry::isoTime(time_t ftime)
     output.second = colorize(&buf[0], color);
 
     return output;
+}
+
+// "5 mins ago" style, or a date once older than created_date_after
+std::string Entry::humanTime(time_t ftime)
+{
+    if (ftime == 0) {
+        return colorize("-", settings.color.date.other);
+    }
+
+    const int64_t delta = now - ftime;
+
+    if (delta >= settings.created_date_after) {
+        char buf[128];
+        struct tm tm = {};
+        localtime_r(&ftime, &tm);
+
+        if (strftime(&buf[0], sizeof(buf),
+                     settings.created_date_format.c_str(), &tm) == 0) {
+            buf[0] = '\0';
+        }
+
+        return colorize(&buf[0], settings.color.date.other);
+    }
+
+    if (delta < 1) {
+        return colorize(settings.symbols.human.now, settings.color.date.sec);
+    }
+
+    struct unit_t {
+        int64_t seconds;
+        const std::string *word;
+        color_t color;
+    };
+
+    // months and years as 1/12 and 1 of 365.25 days
+    const unit_t units[] = {
+        {1, &settings.symbols.human.sec, settings.color.date.sec},
+        {60, &settings.symbols.human.min, settings.color.date.min},
+        {3600, &settings.symbols.human.hour, settings.color.date.hour},
+        {86400, &settings.symbols.human.day, settings.color.date.day},
+        {604800, &settings.symbols.human.week, settings.color.date.week},
+        {2629800, &settings.symbols.human.mon, settings.color.date.mon},
+        {31557600, &settings.symbols.human.year, settings.color.date.year},
+    };
+
+    size_t u = std::size(units) - 1;
+
+    while (u > 0 && delta < units[u].seconds) {
+        u--;
+    }
+
+    const int64_t n = delta / units[u].seconds;
+    const color_t unit_color = units[u].color;
+    const color_t num_color = settings.date_number_color ?
+                              settings.color.date.number : unit_color;
+
+    std::string words = *units[u].word;
+
+    if (n != 1) {
+        words += settings.symbols.human.plural;
+    }
+
+    if (!settings.symbols.human.ago.empty()) {
+        words += ' ';
+        words += settings.symbols.human.ago;
+    }
+
+    return colorize(std::to_string(n), num_color) + " " +
+           colorize(words, unit_color);
 }
 
 DateFormat Entry::relativeTime(time_t ftime)

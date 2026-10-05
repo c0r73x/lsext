@@ -104,6 +104,15 @@ struct settings_t { // NOLINT
 
     int forced_columns;
 
+    // seconds since modification below which the recent colors apply
+    int64_t recent_min_age;
+    int64_t recent_day_age;
+
+    // @c shows "5 mins ago" until this age, then the date formatted with
+    // created_date_format (strftime)
+    int64_t created_date_after;
+    std::string created_date_format;
+
     unsigned char sort;
 
     struct colors_t { // NOLINT
@@ -126,6 +135,12 @@ struct settings_t { // NOLINT
             color_t year;
             color_t other;
         } date;
+
+        // file name color for recently modified entries, fg/bg -1 = off
+        struct recent_t {
+            color_t minute; // modified within the last minute
+            color_t day;    // modified within the last day
+        } recent;
 
         struct perm_t {
             color_t none;
@@ -215,6 +230,20 @@ struct settings_t { // NOLINT
             std::string year;
         } date;
 
+        // words for @c, "<n> <unit><plural> <ago>"
+        struct human_t {
+            std::string sec;
+            std::string min;
+            std::string hour;
+            std::string day;
+            std::string week;
+            std::string mon;
+            std::string year;
+            std::string plural;
+            std::string ago;
+            std::string now;
+        } human;
+
         struct fsize_t {
             std::string byte;
             std::string kilo;
@@ -298,6 +327,7 @@ public:
     bool islink;
 
     time_t modified;
+    time_t created; // 0 when unknown or not needed
     int64_t bsize;
     uint32_t mode;
     int totlen;
@@ -325,6 +355,7 @@ private:
     static DateFormat toDateFormat(const std::string &num, int unit);
     static DateFormat relativeTime(time_t ftime);
     static DateFormat isoTime(time_t ftime);
+    static std::string humanTime(time_t ftime);
     static std::string colorperms(std::string_view input);
     static uint32_t cleanlen(std::string_view input);
     std::string format(char c, DateFormat *rel, DateFormat *iso);

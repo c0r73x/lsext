@@ -37,6 +37,16 @@ resolve_in_repos = 1
 ; default sort method 0 = Alpha, 1 = Modified, 2 = Size
 sort = 0
 
+; age limits for the recent_min / recent_day name colors in [colors],
+; seconds or with a unit: s, m, h, d, w, y
+recent_min_age = 1m
+recent_day_age = 1d
+
+; @c shows the creation time as "5 mins ago" until it is older than
+; created_date_after, then as a date using created_date_format (strftime)
+created_date_after = 1w
+created_date_format = "%Y-%m-%d"
+
 [colors]
 ; Use -1 for reset to default color and XXXXX_bg to set background color
 suffix_exec_fg = 10
@@ -87,6 +97,12 @@ date_mon_fg = 2
 date_week_fg = 2
 date_year_fg = 2
 
+; color the file name of entries modified within recent_min_age /
+; recent_day_age (see [settings], default 1 minute / 1 day)
+; (-1 or unset = use the normal LS_COLORS color)
+; recent_min_fg = 9
+; recent_day_fg = 11
+
 git_ignore_fg = 0
 git_conflict_fg = 1
 git_modified_fg = 3
@@ -105,6 +121,18 @@ git_repo_clean_fg = 2
 git_repo_bare_fg = 4
 
 [symbols]
+; words for @c: "<n> <unit><plural> <ago>", or <now> under a second
+; human_sec = "sec"
+; human_min = "min"
+; human_hour = "hour"
+; human_day = "day"
+; human_week = "week"
+; human_mon = "month"
+; human_year = "year"
+; human_plural = "s"
+; human_ago = "ago"
+; human_now = "now"
+
 suffix_exec = "*"
 suffix_dir = "/"
 suffix_link = " -> "

@@ -115,17 +115,40 @@ struct RepoContext {
     std::vector<Gitlink> gitlinks;
 };
 
+// Open the repository containing path. Searches upwards from path first;
+// libgit2 ignores GIT_DIR when given a path, so fall back to it for
+// repositories with a separate git dir and work tree (yadm, vcsh, ...).
+// Callers must check that path is inside the work tree.
+static bool openRepo(const char *path, git_repository **repo)
+{
+    if (git_repository_open_ext(
+                repo,
+                path,
+                GIT_REPOSITORY_OPEN_FROM_ENV,
+                nullptr
+            ) == 0) {
+        return true;
+    }
+
+    if (getenv("GIT_DIR") != nullptr &&
+            git_repository_open_ext(
+                repo,
+                nullptr,
+                GIT_REPOSITORY_OPEN_FROM_ENV,
+                nullptr
+            ) == 0) {
+        return true;
+    }
+
+    *repo = nullptr;
+    return false;
+}
+
 // Open the repository containing path (not the cwd) and work out where in
 // the work tree path is.
 static bool openRepoContext(const char *path, RepoContext *ctx)
 {
-    if (git_repository_open_ext(
-                &ctx->repo,
-                path,
-                GIT_REPOSITORY_OPEN_FROM_ENV,
-                nullptr
-            ) != 0) {
-        ctx->repo = nullptr;
+    if (!openRepo(path, &ctx->repo)) {
         return false;
     }
 
@@ -570,14 +593,9 @@ FileList listdir(const char *path)
             const int t = 0;
             #endif
 
-            if (repos[t] == nullptr &&
-                    git_repository_open_ext(
-                        &repos[t],
-                        ctx.workdir.c_str(),
-                        GIT_REPOSITORY_OPEN_NO_SEARCH,
-                        nullptr
-                    ) != 0) {
-                repos[t] = nullptr;
+            // opened the same way as ctx.repo, the work tree of a yadm
+            // style repository has no .git to open it from
+            if (repos[t] == nullptr && !openRepo(path, &repos[t])) {
                 continue;
             }
 
@@ -774,7 +792,7 @@ void printdir(FileList *lst, std::string *out)
         size_t end = out->find_last_not_of(" \t\n\v\f\r");
         end = (end == std::string::npos || end < start) ? start : end + 1;
         out->resize(end);
-        *out += "\033[0m\n";
+        *out += settings.colors ? "\033[0m\n" : "\n";
     };
 
     const std::string *ext = nullptr;
@@ -791,7 +809,7 @@ void printdir(FileList *lst, std::string *out)
                 current = 0;
             }
 
-            *out += "\n\033[0m";
+            *out += settings.colors ? "\n\033[0m" : "\n";
             *out += l->extension;
             *out += ":\n";
             ext = &l->extension;
@@ -836,6 +854,40 @@ const char *gethome()
     homedir = result->pw_dir;
 
     return homedir;
+}
+
+// "90", "90s", "5m", "2h", "1d", "1w", "1y" -> seconds, def when unset or invalid
+static int64_t parseAge(const char *value, int64_t def)
+{
+    if (value == nullptr || *value == '\0') {
+        return def;
+    }
+
+    char *end = nullptr;
+    int64_t n = std::strtoll(value, &end, 10);
+
+    if (end == value || n < 0) {
+        fprintf(stderr, "Invalid age '%s', using %ld seconds\n", value,
+                static_cast<long>(def));
+        return def;
+    }
+
+    while (*end == ' ') {
+        end++;
+    }
+
+    switch (*end) {
+        case '\0': case 's': return n;
+        case 'm': return n * 60;
+        case 'h': return n * 3600;
+        case 'd': return n * 86400;
+        case 'w': return n * 604800;
+        case 'y': return n * 31557600;
+        default:
+            fprintf(stderr, "Invalid age '%s', using %ld seconds\n", value,
+                    static_cast<long>(def));
+            return def;
+    }
 }
 
 void loadconfig()
@@ -898,6 +950,16 @@ void loadconfig()
     settings.dirs_first = GETBOOL("settings:dirs_first", 1);
 
     settings.numeric_id = GETBOOL("settings:numeric_id", 0);
+
+    settings.recent_min_age = parseAge(GETSTR("settings:recent_min_age", "1m"), 60);
+    settings.recent_day_age = parseAge(GETSTR("settings:recent_day_age", "1d"), 86400);
+
+    settings.created_date_after = parseAge(
+                                      GETSTR("settings:created_date_after", "1w"),
+                                      604800
+                                  );
+    settings.created_date_format = GETSTR("settings:created_date_format",
+                                          "%Y-%m-%d");
 
     settings.sort = SORT_ALPHA;
 
@@ -997,6 +1059,11 @@ void loadconfig()
     settings.color.date.year.bg = GETINT("colors:date_year_bg", -1);
     settings.color.date.other.bg = GETINT("colors:date_other_bg", -1);
 
+    settings.color.recent.minute.fg = GETINT("colors:recent_min_fg", -1);
+    settings.color.recent.minute.bg = GETINT("colors:recent_min_bg", -1);
+    settings.color.recent.day.fg = GETINT("colors:recent_day_fg", -1);
+    settings.color.recent.day.bg = GETINT("colors:recent_day_bg", -1);
+
     settings.symbols.user.separator = GETSTR("symbols:user_separator", ":");
 
     settings.symbols.suffix.exec = GETSTR("symbols:suffix_exec", "*");
@@ -1019,6 +1086,17 @@ void loadconfig()
     settings.symbols.date.week = GETSTR("symbols:date_week", "week");
     settings.symbols.date.mon = GETSTR("symbols:date_mon", "mon");
     settings.symbols.date.year = GETSTR("symbols:date_year", "year");
+
+    settings.symbols.human.sec = GETSTR("symbols:human_sec", "sec");
+    settings.symbols.human.min = GETSTR("symbols:human_min", "min");
+    settings.symbols.human.hour = GETSTR("symbols:human_hour", "hour");
+    settings.symbols.human.day = GETSTR("symbols:human_day", "day");
+    settings.symbols.human.week = GETSTR("symbols:human_week", "week");
+    settings.symbols.human.mon = GETSTR("symbols:human_mon", "month");
+    settings.symbols.human.year = GETSTR("symbols:human_year", "year");
+    settings.symbols.human.plural = GETSTR("symbols:human_plural", "s");
+    settings.symbols.human.ago = GETSTR("symbols:human_ago", "ago");
+    settings.symbols.human.now = GETSTR("symbols:human_now", "now");
 
     #ifdef USE_GIT
     settings.override_git_repo_color = GETBOOL("settings:override_git_repo_color",
@@ -1146,6 +1224,7 @@ void printHelp(const char *name)
         {"@t", "relative modification time, unit"},
         {"@D", "modification date (YYYY-MM-DD)"},
         {"@T", "modification time (HH:MM)"},
+        {"@c", "creation time, \"5 mins ago\" or a date when older"},
         {"@s", "size"},
         {"@G", "git status"},
         {"@F", "file name"},
@@ -1358,7 +1437,7 @@ int main(int argc, const char *argv[])
                 path.pop_back();
             }
 
-            output += "\n\033[0m";
+            output += settings.colors ? "\n\033[0m" : "\n";
             output += path;
             output += ":\n";
         }
