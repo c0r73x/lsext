@@ -1339,7 +1339,7 @@ DateFormat Entry::isoTime(time_t ftime, const color_t *recent)
     return output;
 }
 
-// "5 mins ago" style, or a date once older than created_date_after
+// "5 mins ago" style, or a date once older than date_after
 std::string Entry::humanTime(time_t ftime, const color_t *recent)
 {
     if (ftime == 0) {
@@ -1378,13 +1378,13 @@ std::string Entry::humanTime(time_t ftime, const color_t *recent)
 
     const color_t unit_color = recent != nullptr ? *recent : units[u].color;
 
-    if (delta >= settings.created_date_after) {
+    if (delta >= settings.date_after) {
         char buf[128];
         struct tm tm = {};
         localtime_r(&ftime, &tm);
 
         if (strftime(&buf[0], sizeof(buf),
-                     settings.created_date_format.c_str(), &tm) == 0) {
+                     settings.date_format.c_str(), &tm) == 0) {
             buf[0] = '\0';
         }
 

@@ -109,9 +109,9 @@ struct settings_t { // NOLINT
     int64_t recent_day_age;
 
     // @c shows "5 mins ago" until this age, then the date formatted with
-    // created_date_format (strftime)
-    int64_t created_date_after;
-    std::string created_date_format;
+    // date_format (strftime)
+    int64_t date_after;
+    std::string date_format;
 
     unsigned char sort;
 

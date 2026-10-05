@@ -954,12 +954,8 @@ void loadconfig()
     settings.recent_min_age = parseAge(GETSTR("settings:recent_min_age", "1m"), 60);
     settings.recent_day_age = parseAge(GETSTR("settings:recent_day_age", "1d"), 86400);
 
-    settings.created_date_after = parseAge(
-                                      GETSTR("settings:created_date_after", "1w"),
-                                      604800
-                                  );
-    settings.created_date_format = GETSTR("settings:created_date_format",
-                                          "%Y-%m-%d");
+    settings.date_after = parseAge(GETSTR("settings:date_after", "1w"), 604800);
+    settings.date_format = GETSTR("settings:date_format", "%Y-%m-%d");
 
     settings.sort = SORT_ALPHA;
 
