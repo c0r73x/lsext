@@ -1467,17 +1467,14 @@ DateFormat Entry::relativeTime(time_t ftime, const color_t *recent)
         return toDateFormat(std::to_string(rel), DATE_WEEK, recent);
     }
 
-    rel /= 4;
-
-    if (delta < 2419200) {
+    // months and years as 1/12 and 1 of 365.25 days, same as humanTime
+    if (delta < 2629800) {
         return toDateFormat("<", DATE_MON, recent); // NOLINT
     }
 
-    if (delta < 29030400) {
-        return toDateFormat(std::to_string(rel), DATE_MON, recent);
+    if (delta < 31557600) {
+        return toDateFormat(std::to_string(delta / 2629800), DATE_MON, recent);
     }
 
-    rel /= 12;
-
-    return toDateFormat(std::to_string(rel), DATE_YEAR, recent);
+    return toDateFormat(std::to_string(delta / 31557600), DATE_YEAR, recent);
 }
