@@ -1365,20 +1365,6 @@ std::string Entry::humanTime(time_t ftime, const color_t *recent)
 
     const int64_t delta = now - ftime;
 
-    if (delta >= settings.created_date_after) {
-        char buf[128];
-        struct tm tm = {};
-        localtime_r(&ftime, &tm);
-
-        if (strftime(&buf[0], sizeof(buf),
-                     settings.created_date_format.c_str(), &tm) == 0) {
-            buf[0] = '\0';
-        }
-
-        return colorize(&buf[0], recent != nullptr ?
-                        *recent : settings.color.date.other);
-    }
-
     if (delta < 1) {
         return colorize(settings.symbols.human.now, recent != nullptr ?
                         *recent : settings.color.date.sec);
@@ -1407,8 +1393,22 @@ std::string Entry::humanTime(time_t ftime, const color_t *recent)
         u--;
     }
 
-    const int64_t n = delta / units[u].seconds;
     const color_t unit_color = recent != nullptr ? *recent : units[u].color;
+
+    if (delta >= settings.created_date_after) {
+        char buf[128];
+        struct tm tm = {};
+        localtime_r(&ftime, &tm);
+
+        if (strftime(&buf[0], sizeof(buf),
+                     settings.created_date_format.c_str(), &tm) == 0) {
+            buf[0] = '\0';
+        }
+
+        return colorize(&buf[0], unit_color);
+    }
+
+    const int64_t n = delta / units[u].seconds;
     const color_t num_color = settings.date_number_color && recent == nullptr ?
                               settings.color.date.number : unit_color;
 

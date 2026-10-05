@@ -43,7 +43,8 @@ recent_min_age = 1m
 recent_day_age = 1d
 
 ; @c shows the creation time as "5 mins ago" until it is older than
-; created_date_after, then as a date using created_date_format (strftime)
+; created_date_after, then as a date using created_date_format (strftime),
+; both colored by age with the date_*_fg colors in [colors]
 created_date_after = 1w
 created_date_format = "%Y-%m-%d"
 
