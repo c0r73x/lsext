@@ -1224,7 +1224,7 @@ void printHelp(const char *name)
         {"@t", "relative modification time, unit"},
         {"@D", "modification date (YYYY-MM-DD)"},
         {"@T", "modification time (HH:MM)"},
-        {"@c", "creation time, \"5 mins ago\" or a date when older"},
+        {"@c", "modified time, \"5 mins ago\" or a date when older"},
         {"@s", "size"},
         {"@G", "git status"},
         {"@F", "file name"},

@@ -42,7 +42,7 @@ sort = 0
 recent_min_age = 1m
 recent_day_age = 1d
 
-; @c shows the creation time as "5 mins ago" until it is older than
+; @c shows the modified time as "5 mins ago" until it is older than
 ; created_date_after, then as a date using created_date_format (strftime),
 ; both colored by age with the date_*_fg colors in [colors]
 created_date_after = 1w
@@ -98,9 +98,8 @@ date_mon_fg = 2
 date_week_fg = 2
 date_year_fg = 2
 
-; color the modification date (@r @t @D @T) of entries modified, and
-; the creation date (@c) of entries created, within recent_min_age /
-; recent_day_age (see [settings], default 1 minute / 1 day)
+; color the modification date (@r @t @D @T @c) of entries modified within
+; recent_min_age / recent_day_age (see [settings], default 1 minute / 1 day)
 ; (-1 or unset = use the normal date colors)
 ; recent_min_fg = 9
 ; recent_day_fg = 11

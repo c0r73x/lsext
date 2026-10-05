@@ -136,7 +136,7 @@ struct settings_t { // NOLINT
             color_t other;
         } date;
 
-        // date color for recently modified/created entries, fg/bg -1 = off
+        // date color for recently modified entries, fg/bg -1 = off
         struct recent_t {
             color_t minute; // modified within the last minute
             color_t day;    // modified within the last day
@@ -327,7 +327,6 @@ public:
     bool islink;
 
     time_t modified;
-    time_t created; // 0 when unknown or not needed
     int64_t bsize;
     uint32_t mode;
     int totlen;

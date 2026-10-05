@@ -584,7 +584,6 @@ Entry::Entry(
         this->group = colorize("????", settings.color.user.group); // NOLINT
         this->mode = 0;
         this->modified = 0;
-        this->created = 0;
         this->bsize = 0;
 
         this->color = findColor(SLK_ORPHAN);
@@ -645,22 +644,6 @@ Entry::Entry(
         }
 
         this->modified = st->st_mtime;
-        this->created = 0;
-
-        // birth time is not in struct stat, only fetched when shown
-        if (parsed_format.uses('c')) {
-            #ifdef __linux__
-            struct statx stx = {};
-
-            if (statx(AT_FDCWD, fullpath, AT_SYMLINK_NOFOLLOW,
-                      STATX_BTIME, &stx) == 0 &&
-                    (stx.stx_mask & STATX_BTIME) != 0) {
-                this->created = stx.stx_btime.tv_sec;
-            }
-            #elif __APPLE__
-            this->created = st->st_birthtime;
-            #endif
-        }
 
         this->bsize = st->st_size;
         this->mode = st->st_mode;
@@ -856,7 +839,7 @@ std::string Entry::format(char c, DateFormat *rel, DateFormat *iso)
         }
 
         case 'c': {
-            output = humanTime(created, recentColor(now - created));
+            output = humanTime(modified, recent);
             break;
         }
 
