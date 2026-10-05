@@ -929,9 +929,9 @@ void loadconfig()
 
     settings.forced_columns = 0;
 
-    settings.list_format = GETSTR("symbols:list_format",
+    settings.list_format = GETSTR("settings:list_format",
                                   " @p    @U  @^r @t  @^s  @G@f");
-    settings.format = GETSTR("symbols:format", "@G@F");
+    settings.format = GETSTR("settings:format", "@G@F");
 
     settings.size_number_color = GETBOOL("settings:size_number_color", 1);
     settings.date_number_color = GETBOOL("settings:date_number_color", 1);
