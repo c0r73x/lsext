@@ -89,6 +89,7 @@ include_directories(
     "../externals/stb/"
     ${GIT_INCLUDE_DIR}
     ${INIPARSER_INCLUDE_DIRS}
+    ${OpenMP_CXX_INCLUDE_DIRS}
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${COMMON_SRC})
