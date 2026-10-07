@@ -20,12 +20,12 @@ extern "C" {
     #include <libgen.h>
     #include <pwd.h>
     #include <sys/stat.h>
-    #include <sys/sysmacros.h>
     #include <sys/xattr.h>
     #include <unistd.h>
     #include <stb_sprintf.h>
 
     #ifdef __linux__
+        #include <sys/sysmacros.h>
         #include <linux/xattr.h>
     #elif __APPLE__
         #include <sys/types.h>
