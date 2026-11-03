@@ -1150,6 +1150,9 @@ char Entry::fileHasAcl()
     }
 
     if (xattr > 0) {
+        if (acl != NULL) {
+            acl_free(acl);
+        }
         return '@';
     }
 
