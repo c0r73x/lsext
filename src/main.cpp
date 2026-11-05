@@ -937,7 +937,6 @@ void loadconfig()
     settings.date_number_color = GETBOOL("settings:date_number_color", 1);
 
     settings.show_hidden = GETBOOL("settings:show_hidden", 0);
-    settings.show_hidden = GETBOOL("settings:show_hidden", 0);
 
     settings.list = GETBOOL("settings:list", 0);
 
@@ -1258,7 +1257,7 @@ int main(int argc, const char *argv[])
     bool parse = true;
 
     while (parse) {
-        int c = getopt_long(argc, const_cast<char **>(argv), "c:LMGgarfXtSAlnF:Ch",
+        int c = getopt_long(argc, const_cast<char **>(argv), "c:LMGgarfXtSAlnF:ChN",
                             long_options, 0);
 
         switch (c) {
